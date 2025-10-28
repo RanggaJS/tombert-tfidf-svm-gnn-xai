@@ -27,7 +27,7 @@ class EarlyStopping:
         self.counter = 0
         self.best_score = None
         self.early_stop = False
-        self.val_loss_min = np.Inf
+        self.val_loss_min = np.inf
         self.delta = delta
 
     def __call__(self, val_loss, model, path):
@@ -116,7 +116,6 @@ class NeuralNetwork(nn.Module):
             mode='max',
             factor=0.5,
             patience=2,
-            verbose=True,
             min_lr=1e-6
         )
         

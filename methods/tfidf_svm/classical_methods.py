@@ -110,22 +110,22 @@ class EnhancedImageFeatureExtractor:
     def extract_features(self, img_path):
         """Extract comprehensive image features"""
         try:
-                img = cv2.imread(img_path)
-                if img is None:
+            img = cv2.imread(img_path)
+            if img is None:
                 return np.zeros(200)  # Increased feature size
                 
             img = cv2.resize(img, self.target_size)
                 
             # Multiple feature types
-                color_features = self._extract_color_features(img)
-                texture_features = self._extract_texture_features(img)
+            color_features = self._extract_color_features(img)
+            texture_features = self._extract_texture_features(img)
             edge_features = self._extract_edge_features(img)
             statistical_features = self._extract_statistical_features(img)
             
             # Combine all features
             all_features = np.concatenate([
-                    color_features,
-                    texture_features, 
+                color_features,
+                texture_features, 
                 edge_features,
                 statistical_features
             ])
@@ -138,7 +138,7 @@ class EnhancedImageFeatureExtractor:
             
             return all_features
                 
-            except Exception as e:
+        except Exception as e:
             logger.warning(f"Error extracting features from {img_path}: {e}")
             return np.zeros(200)
     
@@ -402,7 +402,7 @@ class TFIDFSVMClassifier:
         if self.use_grid_search:
             self.svm_classifier = self._perform_grid_search(combined_features, labels)
         else:
-        self.svm_classifier.fit(combined_features, labels)
+            self.svm_classifier.fit(combined_features, labels)
         
         self.is_fitted = True
         logger.info("Model training completed!")

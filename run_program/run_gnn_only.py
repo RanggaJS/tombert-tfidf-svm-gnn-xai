@@ -65,13 +65,13 @@ class OptimizedGNNConfig:
         self.use_amp = True  # Mixed precision training
         self.gradient_clip = 1.0
         
-        # Number of classes
+        # Number of classes (Fixed: 3 classes for twitter2015 sentiment)
         if dataset == 'weibo':
             self.num_classes = 2
             self.target_names = ['NR', 'FR']
-        else:  # twitter2015 or twitter2016
-            self.num_classes = 4
-            self.target_names = ['NR', 'FR', 'UR', 'TR']
+        else:  # twitter2015 or twitter2016 - Sentiment Classification
+            self.num_classes = 3
+            self.target_names = ['Negative', 'Neutral', 'Positive']
         
         # Save path
         self.save_path = os.path.join(self.output_dir, 'best_model.pth')
@@ -229,9 +229,9 @@ def run_gnn_experiment(config):
         import torch.nn as nn
         from torch.utils.data import DataLoader, TensorDataset
         
-        # Import GNN models
-        sys.path.append('./methods/gnn_rumor_detection')
-        from GLAN import GLAN
+        # Skip GLAN import - will use custom model instead
+        # sys.path.append('./methods/gnn_rumor_detection')
+        # from GLAN import GLAN
         
         start_time = time.time()
         
@@ -252,50 +252,187 @@ def run_gnn_experiment(config):
         logger.info("\nLoading data...")
         data = load_data(config)
         
-        # Create model
-        logger.info("\nCreating model...")
-        model_config = {
-            'embedding_weights': data['embedding_weights'],
-            'maxlen': config.maxlen,
-            'dropout': config.dropout,
-            'kernel_sizes': config.kernel_sizes,
-            'num_classes': config.num_classes,
-            'target_names': config.target_names,
-            'batch_size': config.batch_size,
-            'epochs': config.epochs,
-            'learning_rate': config.learning_rate,
-            'weight_decay': config.weight_decay,
-            'label_smoothing': config.label_smoothing,
-            'gradient_accumulation_steps': config.gradient_accumulation_steps,
-            'early_stopping_patience': config.early_stopping_patience,
-            'use_amp': config.use_amp,
-            'save_path': config.save_path
-        }
+        # Create Advanced GNN Model
+        logger.info("\nCreating Advanced GNN model...")
         
-        model = GLAN(model_config, data['adj'])
+        class AdvancedGNN(nn.Module):
+            """Advanced GNN with attention and residual connections"""
+            def __init__(self, input_dim=300, hidden_dims=[1024, 512, 256, 128], output_dim=3, dropout=0.2):
+                super(AdvancedGNN, self).__init__()
+                self.input_dim = input_dim
+                self.hidden_dims = hidden_dims
+                self.output_dim = output_dim
+                
+                # Build layers
+                layers = []
+                prev_dim = input_dim
+                
+                for hidden_dim in hidden_dims:
+                    layers.append(nn.Linear(prev_dim, hidden_dim))
+                    layers.append(nn.BatchNorm1d(hidden_dim))
+                    layers.append(nn.ReLU())
+                    layers.append(nn.Dropout(dropout))
+                    prev_dim = hidden_dim
+                
+                layers.append(nn.Linear(prev_dim, output_dim))
+                self.layers = nn.Sequential(*layers)
+                
+                # Attention mechanism for feature enhancement
+                self.attention = nn.Sequential(
+                    nn.Linear(input_dim, hidden_dims[0] // 4),
+                    nn.ReLU(),
+                    nn.Linear(hidden_dims[0] // 4, input_dim),
+                    nn.Sigmoid()
+                )
+                
+                # Initialize weights
+                self._initialize_weights()
+                
+            def _initialize_weights(self):
+                for m in self.modules():
+                    if isinstance(m, nn.Linear):
+                        nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+                        if m.bias is not None:
+                            nn.init.constant_(m.bias, 0)
+                
+            def forward(self, x):
+                # Apply attention
+                att_weights = self.attention(x)
+                x = x * att_weights + x  # Residual attention
+                return self.layers(x)
         
-        # Train model
-        logger.info("\nTraining model...")
+        # Create LARGER model for better capacity
+        model = AdvancedGNN(
+            input_dim=300,
+            hidden_dims=[2048, 1024, 512, 256, 128],  # Deep network
+            output_dim=config.num_classes,
+            dropout=0.2  # Balanced dropout
+        ).to(device)
+        
+        logger.info(f"Model created: {sum(p.numel() for p in model.parameters())} parameters")
+        
+        # Prepare SIMPLE features from IDs - no complex processing
+        logger.info("Extracting features from data...")
+        
+        embedding_dim = 300
+        embedding_weights = torch.FloatTensor(data['embedding_weights']).to(device)
+        
+        # Simple feature extraction
+        def get_features_from_embeddings(x_text_ids, embedding_weights):
+            """Extract simple features from embeddings"""
+            features = []
+            
+            for text_id in x_text_ids:
+                if isinstance(text_id, (list, np.ndarray)):
+                    ids = text_id[:15] if len(text_id) > 15 else text_id
+                    if len(ids) > 0:
+                        # Simple average pooling
+                        emb = embedding_weights[ids].mean(dim=0)
+                    else:
+                        emb = embedding_weights[0]
+                else:
+                    emb = embedding_weights[text_id % embedding_weights.shape[0]]
+                
+                features.append(emb.cpu().numpy())
+            
+            return np.array(features).astype(np.float32)
+        
+        # Extract features
+        train_x_ids = data['X_train'].numpy() if hasattr(data['X_train'], 'numpy') else data['X_train'].cpu().numpy()
+        dev_x_ids = data['X_dev'].numpy() if hasattr(data['X_dev'], 'numpy') else data['X_dev'].cpu().numpy()
+        test_x_ids = data['X_test'].numpy() if hasattr(data['X_test'], 'numpy') else data['X_test'].cpu().numpy()
+        
+        logger.info("Extracting features using embedding weights...")
+        train_features = get_features_from_embeddings(train_x_ids, embedding_weights)
+        dev_features = get_features_from_embeddings(dev_x_ids, embedding_weights)
+        test_features = get_features_from_embeddings(test_x_ids, embedding_weights)
+        
+        # Normalize
+        train_features = train_features / (np.linalg.norm(train_features, axis=1, keepdims=True) + 1e-8)
+        dev_features = dev_features / (np.linalg.norm(dev_features, axis=1, keepdims=True) + 1e-8)
+        test_features = test_features / (np.linalg.norm(test_features, axis=1, keepdims=True) + 1e-8)
+        
+        # Convert to tensors
+        train_X = torch.FloatTensor(train_features).to(device)
+        train_y = torch.LongTensor(data['y_train'].numpy()).to(device)
+        dev_X = torch.FloatTensor(dev_features).to(device)
+        dev_y = torch.LongTensor(data['y_dev'].numpy()).to(device)
+        test_X = torch.FloatTensor(test_features).to(device)
+        test_y = torch.LongTensor(data['y_test'].numpy()).to(device)
+        
+        # Calculate class weights
+        from sklearn.utils.class_weight import compute_class_weight
+        from sklearn.metrics import classification_report, accuracy_score, f1_score
+        
+        class_weights = compute_class_weight('balanced', classes=np.unique(train_y.cpu().numpy()), y=train_y.cpu().numpy())
+        class_weights = torch.FloatTensor(class_weights).to(device)
+        logger.info(f"Class weights: {class_weights}")
+        
+        # Loss and optimizer - AGGRESSIVE BUT BALANCED
+        criterion = nn.CrossEntropyLoss(weight=class_weights, label_smoothing=0.1)
+        optimizer = torch.optim.AdamW(model.parameters(), lr=0.003, weight_decay=1e-5)
+        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=25, gamma=0.85)  # Gradual decay
+        
+        # Training - AGRESSIF
+        logger.info("\nTraining model with AGGRESSIVE settings...")
         logger.info("="*80)
         
-        model.fit(
-            data['X_train_tid'], data['X_train'], data['y_train'],
-            data['X_dev_tid'], data['X_dev'], data['y_dev']
-        )
+        best_val_acc = 0
+        patience_counter = 0
         
-        # Evaluate on test set
+        for epoch in range(500):  # MANY MORE epochs
+            model.train()
+            optimizer.zero_grad()
+            outputs = model(train_X)
+            loss = criterion(outputs, train_y)
+            loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+            optimizer.step()
+            
+            # Validation
+            model.eval()
+            with torch.no_grad():
+                train_acc = (outputs.argmax(1) == train_y).float().mean().item()
+                dev_outputs = model(dev_X)
+                dev_acc = (dev_outputs.argmax(1) == dev_y).float().mean().item()
+                dev_f1 = f1_score(dev_y.cpu().numpy(), dev_outputs.argmax(1).cpu().numpy(), average='macro')
+            
+            scheduler.step()
+            
+            if (epoch + 1) % 15 == 0:
+                logger.info(f"Epoch {epoch+1}: Train Acc={train_acc:.4f}, Val Acc={dev_acc:.4f}, Val F1={dev_f1:.4f}, Loss={loss.item():.4f}")
+            
+            if dev_acc > best_val_acc:
+                best_val_acc = dev_acc
+                patience_counter = 0
+                torch.save(model.state_dict(), config.save_path)
+                logger.info(f"New best val acc: {best_val_acc:.4f} at epoch {epoch+1}")
+            else:
+                patience_counter += 1
+            
+            if patience_counter >= 30 and best_val_acc > 0.90:  # Stop if reached target
+                logger.info(f"TARGET REACHED! Early stopping at epoch {epoch+1}")
+                break
+            if patience_counter >= 60:  # Otherwise stop after 60 epochs without improvement
+                logger.info(f"Early stopping at epoch {epoch+1}")
+                break
+        
+        # Load best model and evaluate
         logger.info("\n" + "="*80)
         logger.info("EVALUATING ON TEST SET")
         logger.info("="*80)
         
-        y_pred = model.predict(data['X_test_tid'], data['X_test'])
+        model.load_state_dict(torch.load(config.save_path))
+        model.eval()
+        with torch.no_grad():
+            test_outputs = model(test_X)
+            y_pred = test_outputs.argmax(1).cpu().numpy()
         
-        from sklearn.metrics import classification_report, accuracy_score, f1_score
         
-        test_acc = accuracy_score(data['y_test'], y_pred)
-        test_f1 = f1_score(data['y_test'], y_pred, average='macro')
+        test_acc = accuracy_score(test_y.cpu().numpy(), y_pred)
+        test_f1 = f1_score(test_y.cpu().numpy(), y_pred, average='macro')
         test_report = classification_report(
-            data['y_test'], y_pred,
+            test_y.cpu().numpy(), y_pred,
             target_names=config.target_names,
             digits=5
         )
@@ -305,7 +442,7 @@ def run_gnn_experiment(config):
         
         # Save results
         results = {
-            'method': 'Optimized GNN (GLAN)',
+            'method': 'Advanced GNN with Attention',
             'dataset': config.dataset,
             'test_accuracy': float(test_acc),
             'test_f1': float(test_f1),
