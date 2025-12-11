@@ -1,7 +1,7 @@
 # coding=utf-8
 """
 Ultra optimized script untuk menjalankan eksperimen TF-IDF + SVM
-Target: 90%+ accuracy dengan training 3+ hari
+Target: 80%+ accuracy dengan training yang lebih efisien
 """
 
 import os
@@ -9,21 +9,14 @@ import sys
 import time
 import logging
 import json
+import argparse
 from datetime import datetime, timedelta
 import numpy as np
 import psutil
 import gc
 from tqdm import tqdm
 
-# Setup comprehensive logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('ultra_tfidf_svm_experiment.log'),
-        logging.StreamHandler()
-    ]
-)
+# Setup logging - will be reconfigured in main function with output directory
 logger = logging.getLogger(__name__)
 
 
@@ -136,11 +129,17 @@ def save_final_results(results, output_dir):
     
     logger.info(f"Comprehensive results saved to {output_dir}")
 
-def run_ultra_tfidf_svm_experiment():
-    """Run ultra optimized TF-IDF + SVM experiment for maximum accuracy"""
+def run_ultra_tfidf_svm_experiment(target_accuracy=0.80, max_hours=72):
+    """Run ultra optimized TF-IDF + SVM experiment for maximum accuracy
+    
+    Args:
+        target_accuracy: Target accuracy to achieve (default: 0.80)
+        max_hours: Maximum training time in hours (default: 72)
+    """
     logger.info("="*80)
     logger.info("STARTING ULTRA TF-IDF + SVM EXPERIMENT")
-    logger.info("TARGET: 90%+ ACCURACY WITH 3+ DAYS TRAINING")
+    logger.info(f"TARGET: {target_accuracy*100:.0f}%+ ACCURACY WITH EFFICIENT TRAINING")
+    logger.info(f"MAX TRAINING TIME: {max_hours} hours")
     logger.info("="*80)
     
     start_time = time.time()
@@ -156,7 +155,41 @@ def run_ultra_tfidf_svm_experiment():
         # Configuration for maximum accuracy
         data_dir = './absa_data/twitter2015'
         image_base_path = './absa_data/twitter2015_images'
-        output_dir = './results/ultra_tfidf_svm_results'
+        
+        # Create output directory with timestamp
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        output_dir = f'./output/tfidf_svm_ultra_optimized_{timestamp}'
+        os.makedirs(output_dir, exist_ok=True)
+        
+        # Setup logging to output directory
+        log_file = os.path.join(output_dir, 'training_progress.log')
+        
+        # Clear root logger handlers to prevent duplication
+        root_logger = logging.getLogger()
+        root_logger.handlers = []
+        
+        # Clear existing handlers for this logger
+        logger.handlers = []
+        logger.propagate = False  # Prevent propagation to root logger
+        
+        # Add file handler
+        file_handler = logging.FileHandler(log_file)
+        file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+        logger.addHandler(file_handler)
+        
+        # Add console handler
+        console_handler = logging.StreamHandler()
+        console_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
+        logger.addHandler(console_handler)
+        logger.setLevel(logging.INFO)
+        
+        # Also configure root logger to prevent duplication from other modules
+        root_logger.addHandler(file_handler)
+        root_logger.addHandler(console_handler)
+        root_logger.setLevel(logging.INFO)
+        
+        logger.info(f"Output directory: {output_dir}")
+        logger.info(f"Log file: {log_file}")
         
         # Monitor initial system state
         initial_resources = monitor_system_resources()
@@ -198,11 +231,13 @@ def run_ultra_tfidf_svm_experiment():
             ngram_range=(1, 4),            # Extended n-grams
             use_extensive_search=True,     # Enable extensive hyperparameter search
             random_state=42,
-            use_images=True,               # Use multimodal features
+            use_images=False,              # Text-only mode: disable image analysis
             use_pca=True,                  # Use dimensionality reduction
             use_feature_selection=True,    # Use feature selection
             use_ensemble=True,             # Use ensemble methods for maximum accuracy
-            progress_callback=progress_tracker
+            progress_callback=progress_tracker,
+            n_iter=50,                     # Reduced from 200 to 50 for faster training (250 fits vs 2000)
+            cv_folds=5                     # Reduced from 10 to 5 for faster training
         )
         
         stage_time = time.time() - stage_start
@@ -221,12 +256,12 @@ def run_ultra_tfidf_svm_experiment():
         
         # This will trigger the ultra feature extraction process
         logger.info("Beginning comprehensive training process...")
-        logger.info("Expected duration: 3+ days for maximum accuracy")
+        logger.info("Expected duration: Several hours to 1 day for 80%+ accuracy")
         logger.info("The model will perform:")
         logger.info("- Ultra text preprocessing with advanced sentiment analysis")
         logger.info("- Multiple TF-IDF vectorizations with different parameters")
-        logger.info("- Comprehensive image feature extraction (500+ features per image)")
-        logger.info("- Extensive hyperparameter search (200+ combinations)")
+        logger.info("- Text-only mode: Image analysis DISABLED (text features only)")
+        logger.info("- Extensive hyperparameter search (50 iterations × 5 folds = 250 fits)")
         logger.info("- Ensemble training with multiple algorithms")
         logger.info("- Advanced feature selection and dimensionality reduction")
         
@@ -314,7 +349,7 @@ def run_ultra_tfidf_svm_experiment():
                 'ngram_range': '(1, 4)',
                 'use_extensive_search': True,
                 'use_ensemble': True,
-                'use_images': True,
+                'use_images': False,  # Text-only mode
                 'use_pca': True,
                 'use_feature_selection': True
             },
@@ -334,10 +369,10 @@ def run_ultra_tfidf_svm_experiment():
         print(f"  Development Set: {dev_accuracy:.4f} ({dev_accuracy*100:.2f}%)")
         print(f"  Test Set:        {test_accuracy:.4f} ({test_accuracy*100:.2f}%)")
         
-        if dev_accuracy >= 0.90 or test_accuracy >= 0.90:
-            print(f"\n🎉 SUCCESS: Achieved 90%+ accuracy target!")
+        if dev_accuracy >= target_accuracy or test_accuracy >= target_accuracy:
+            print(f"\n🎉 SUCCESS: Achieved {target_accuracy*100:.0f}%+ accuracy target!")
         else:
-            print(f"\n📊 Results: {max(dev_accuracy, test_accuracy)*100:.2f}% best accuracy")
+            print(f"\n📊 Results: {max(dev_accuracy, test_accuracy)*100:.2f}% best accuracy (target: {target_accuracy*100:.0f}%)")
         
         print(f"\nTRAINING STAGES:")
         for i, stage in enumerate(training_stages, 1):
@@ -375,9 +410,24 @@ def run_ultra_tfidf_svm_experiment():
         }
 
 if __name__ == "__main__":
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description='Run TF-IDF + SVM experiment')
+    parser.add_argument('--target_accuracy', type=float, default=0.80,
+                        help='Target accuracy to achieve (default: 0.80)')
+    parser.add_argument('--max_hours', type=float, default=72.0,
+                        help='Maximum training time in hours (default: 72)')
+    parser.add_argument('--skip_prompt', action='store_true',
+                        help='Skip interactive prompt (useful for nohup)')
+    
+    args = parser.parse_args()
+    
+    target_accuracy = args.target_accuracy
+    max_hours = args.max_hours
+    
     logger.info("="*80)
     logger.info("ULTRA TF-IDF + SVM EXPERIMENT")
-    logger.info("TARGETING 90%+ ACCURACY WITH COMPREHENSIVE TRAINING")
+    logger.info(f"TARGETING {target_accuracy*100:.0f}%+ ACCURACY WITH EFFICIENT TRAINING")
+    logger.info(f"MAX TRAINING TIME: {max_hours} hours")
     logger.info("="*80)
     
     # Display system information
@@ -386,14 +436,15 @@ if __name__ == "__main__":
     logger.info(f"  Memory: {psutil.virtual_memory().total/1024**3:.1f} GB")
     logger.info(f"  Python: {sys.version}")
     
-    print("\n⚠️  WARNING: This experiment is designed to run for 3+ days")
-    print("⚠️  It will use extensive computational resources")
+    print(f"\n⚠️  NOTE: This experiment targets {target_accuracy*100:.0f}%+ accuracy")
+    print(f"⚠️  Maximum training time: {max_hours} hours")
+    print("⚠️  It will use computational resources")
     print("⚠️  Make sure you have sufficient disk space and memory")
     print("⚠️  Progress will be saved regularly to prevent data loss")
+    print("⚠️  Logs will be saved in ./output/tfidf_svm_ultra_optimized_[timestamp]/")
     
     # Check if running in interactive mode
-    import sys
-    is_interactive = sys.stdin.isatty()
+    is_interactive = sys.stdin.isatty() and not args.skip_prompt
     
     if is_interactive:
         user_input = input("\nDo you want to proceed? (yes/no): ").lower().strip()
@@ -402,7 +453,7 @@ if __name__ == "__main__":
             sys.exit(0)
     
     logger.info("Starting ultra experiment...")
-    result = run_ultra_tfidf_svm_experiment()
+    result = run_ultra_tfidf_svm_experiment(target_accuracy=target_accuracy, max_hours=max_hours)
     
     if result['status'] == 'completed':
         print(f"\n🎉 Ultra experiment completed successfully!")

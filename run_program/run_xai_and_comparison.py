@@ -4,6 +4,7 @@ Script untuk menjalankan XAI analysis dan membuat perbandingan semua metode - OP
 Enhanced dengan parallel processing, advanced visualizations, dan comprehensive analysis
 """
 
+import argparse
 import os
 import sys
 import time
@@ -16,6 +17,11 @@ from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 import warnings
 warnings.filterwarnings('ignore')
 
+# Ensure project root is on sys.path so `methods` can be imported when run as a script
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
@@ -24,6 +30,7 @@ import plotly.graph_objects as go
 import plotly.express as px
 from plotly.subplots import make_subplots
 import plotly.offline as pyo
+from methods.xai.gpt_explainer import generate_gpt_explanations, DEFAULT_CLASS_NAMES
 
 # Setup enhanced logging
 logging.basicConfig(
@@ -35,6 +42,54 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Utility helpers for GPT-based explanations
+# ---------------------------------------------------------------------------
+def _read_jsonl(path: Path) -> List[Dict[str, Any]]:
+    data: List[Dict[str, Any]] = []
+    with open(path, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            data.append(json.loads(line))
+    return data
+
+
+def _read_json(path: Path) -> List[Dict[str, Any]]:
+    with open(path, "r", encoding="utf-8") as f:
+        content = json.load(f)
+    if isinstance(content, list):
+        return content
+    raise ValueError("JSON file must berisi array of prediction objects.")
+
+
+def _write_jsonl(path: Path, rows: List[Dict[str, Any]]) -> None:
+    with open(path, "w", encoding="utf-8") as f:
+        for row in rows:
+            f.write(json.dumps(row, ensure_ascii=False) + "\n")
+
+
+def _find_latest_prediction_file(base_dir: Path) -> Optional[Path]:
+    """Cari file prediksi terbaru di folder output (.jsonl/.json)."""
+    if not base_dir.exists():
+        return None
+
+    candidates: List[Path] = []
+    for pattern in ["**/*pred*.jsonl", "**/*pred*.json", "**/*prediction*.jsonl", "**/*prediction*.json"]:
+        candidates.extend(base_dir.glob(pattern))
+
+    if not candidates:
+        return None
+
+    candidates = [c for c in candidates if c.is_file()]
+    if not candidates:
+        return None
+
+    candidates.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+    return candidates[0]
+
 
 # Set visualization styles
 plt.style.use('seaborn-v0_8-darkgrid')
@@ -77,6 +132,76 @@ class OptimizedExperimentRunner:
         
         for dir_name in directories:
             (self.output_dir / dir_name).mkdir(parents=True, exist_ok=True)
+
+    def run_gpt_xai_from_output(
+        self,
+        predictions_path: Optional[str] = None,
+        output_dir: str = "./output/xai_gpt",
+        limit: Optional[int] = None,
+        model: str = "gpt-4o-mini",
+        temperature: float = 0.2,
+        max_tokens: int = 320,
+        class_names: Optional[Dict[Any, str]] = None,
+    ) -> Dict[str, Any]:
+        """
+        Jalankan XAI berbasis GPT dari file prediksi (tanpa mengubah kode metode).
+
+        Args:
+            predictions_path: Path ke file prediksi (.jsonl/.json). Jika None, akan mencari file terbaru di ./output.
+            output_dir: Folder tujuan untuk menyimpan explanations.
+            limit: Opsional, batasi jumlah sampel yang dijelaskan.
+            model: Nama model OpenAI (default: gpt-4o-mini).
+            temperature: Suhu sampling.
+            max_tokens: Batas token untuk tiap penjelasan.
+            class_names: Mapping id->nama label, default Twitter2015.
+        """
+        logger.info("Menjalankan GPT-based XAI dari file prediksi...")
+
+        if predictions_path is None:
+            latest = _find_latest_prediction_file(Path("./output"))
+            if latest is None:
+                raise FileNotFoundError("Tidak menemukan file prediksi di ./output. Beri --input path ke file prediksi.")
+            predictions_path = str(latest)
+            logger.info(f"Menggunakan file prediksi terbaru: {predictions_path}")
+
+        pred_path = Path(predictions_path)
+        if not pred_path.exists():
+            raise FileNotFoundError(f"File prediksi tidak ditemukan: {predictions_path}")
+
+        ext = pred_path.suffix.lower()
+        if ext == ".jsonl":
+            samples = _read_jsonl(pred_path)
+        elif ext == ".json":
+            samples = _read_json(pred_path)
+        else:
+            raise ValueError("Format input tidak didukung. Gunakan .jsonl atau .json.")
+
+        if limit is not None:
+            samples = samples[:limit]
+
+        class_map = class_names or DEFAULT_CLASS_NAMES
+        output_path = Path(output_dir)
+        output_path.mkdir(parents=True, exist_ok=True)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        explanation_file = output_path / f"gpt_explanations_{timestamp}.jsonl"
+
+        explanations = generate_gpt_explanations(
+            samples,
+            model=model,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            class_names=class_map,
+        )
+        _write_jsonl(explanation_file, explanations)
+
+        logger.info(f"Berhasil membuat {len(explanations)} penjelasan GPT -> {explanation_file}")
+        return {
+            "status": "completed",
+            "count": len(explanations),
+            "input_file": str(pred_path),
+            "output_file": str(explanation_file),
+            "model": model,
+        }
 
     def run_optimized_xai_analysis(self) -> Dict[str, Any]:
         """
@@ -1086,21 +1211,49 @@ def main():
     """
     Main function untuk menjalankan optimized experiment
     """
+    parser = argparse.ArgumentParser(description="Jalankan XAI & comparison (atau hanya GPT XAI dari output).")
+    parser.add_argument("--gpt_explain", action="store_true",
+                        help="Hanya jalankan GPT-based XAI dari file prediksi (tanpa eksperimen lain).")
+    parser.add_argument("--input", type=str,
+                        help="Path ke file prediksi (.json/.jsonl). Jika tidak diisi, akan cari file terbaru di ./output.")
+    parser.add_argument("--output_dir", type=str, default="./output/xai_gpt",
+                        help="Folder output untuk penjelasan GPT (default: ./output/xai_gpt).")
+    parser.add_argument("--limit", type=int, default=None,
+                        help="Batas jumlah sampel yang dijelaskan (default: semua).")
+    parser.add_argument("--model", type=str, default="gpt-4o-mini",
+                        help="Model OpenAI untuk penjelasan (default: gpt-4o-mini).")
+    parser.add_argument("--temperature", type=float, default=0.2,
+                        help="Temperature sampling (default: 0.2).")
+    parser.add_argument("--max_tokens", type=int, default=320,
+                        help="Maks token per penjelasan (default: 320).")
+    parser.add_argument("--max_workers", type=int, default=4,
+                        help="Jumlah worker untuk runner utama (default: 4).")
+
+    args = parser.parse_args()
+
     logger.info("STARTING OPTIMIZED XAI ANALYSIS AND COMPARISON")
     logger.info("="*60)
     
-    # Initialize experiment runner
     runner = OptimizedExperimentRunner(
         output_dir='./results',
-        max_workers=4
+        max_workers=args.max_workers
     )
+
+    if args.gpt_explain:
+        result = runner.run_gpt_xai_from_output(
+            predictions_path=args.input,
+            output_dir=args.output_dir,
+            limit=args.limit,
+            model=args.model,
+            temperature=args.temperature,
+            max_tokens=args.max_tokens,
+        )
+        logger.info("GPT-based XAI selesai.")
+        return result
     
-    # Run complete experiment
+    # Default: run complete experiment
     results = runner.run_complete_experiment()
-    
-    # Final cleanup and summary
     logger.info("Experiment completed successfully!")
-    
     return results
 
 

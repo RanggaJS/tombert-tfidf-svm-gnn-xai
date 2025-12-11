@@ -29,7 +29,8 @@ from tqdm import tqdm, trange
 
 import numpy as np
 import torch
-from torch.utils.data import TensorDataset, DataLoader, RandomSampler, SequentialSampler
+from itertools import chain
+from torch.utils.data import TensorDataset, DataLoader, RandomSampler, SequentialSampler, WeightedRandomSampler
 from torch.utils.data.distributed import DistributedSampler
 
 # Ensure project root is on sys.path so 'my_bert' and other local packages can be imported
@@ -47,6 +48,13 @@ from my_bert.file_utils import PYTORCH_PRETRAINED_BERT_CACHE
 
 import resnet.resnet as resnet
 from resnet.resnet_utils import myResnet
+
+# CLIP integration
+try:
+    from clip_wrapper.clip_utils import CLIPImageEncoder, CLIP_AVAILABLE
+except ImportError:
+    CLIP_AVAILABLE = False
+    CLIPImageEncoder = None
 
 from torchvision import transforms
 from torchvision.models import resnet152 as tv_resnet152
@@ -175,7 +183,8 @@ class CombinedLoss(torch.nn.Module):
         focal_loss = self.focal_loss(pred, target)
         return self.ls_weight * ls_loss + self.focal_weight * focal_loss
 
-def create_ultra_optimizer_grouped_parameters(model, encoder, learning_rate, weight_decay=0.01):
+def create_ultra_optimizer_grouped_parameters(model, encoder, learning_rate, weight_decay=0.01,
+                                              clip_lr_scale=0.05, clip_projection_lr_scale=1.0):
     """Create ultra-optimized parameter groups with layer-wise learning rates"""
     no_decay = ['bias', 'LayerNorm.bias', 'LayerNorm.weight']
     seen_params = set()
@@ -197,10 +206,20 @@ def create_ultra_optimizer_grouped_parameters(model, encoder, learning_rate, wei
     named_model_params = list(model.named_parameters())
     named_encoder_params = list(encoder.named_parameters())
 
+    def append_group(params, lr_value, weight_decay_value):
+        if not params:
+            return
+        param_groups.append({
+            'params': params,
+            'weight_decay': weight_decay_value,
+            'lr': lr_value,
+            'initial_lr': lr_value
+        })
+    
     # BERT layers with different learning rates (lower for earlier layers)
     for layer_idx in range(12):  # BERT has 12 layers
         layer_lr = learning_rate * (0.8 + 0.2 * layer_idx / 11)
-
+        
         layer_params_decay = filter_params(
             named_model_params,
             lambda n, _: f'layer.{layer_idx}' in n and not any(nd in n for nd in no_decay)
@@ -210,19 +229,9 @@ def create_ultra_optimizer_grouped_parameters(model, encoder, learning_rate, wei
             lambda n, _: f'layer.{layer_idx}' in n and any(nd in n for nd in no_decay)
         )
 
-        if layer_params_decay:
-            param_groups.append({
-                'params': layer_params_decay,
-                'weight_decay': weight_decay,
-                'lr': layer_lr
-            })
-        if layer_params_no_decay:
-            param_groups.append({
-                'params': layer_params_no_decay,
-                'weight_decay': 0.0,
-                'lr': layer_lr
-            })
-
+        append_group(layer_params_decay, layer_lr, weight_decay)
+        append_group(layer_params_no_decay, layer_lr, 0.0)
+    
     # Other BERT parameters
     other_bert_params_decay = filter_params(
         named_model_params,
@@ -233,42 +242,53 @@ def create_ultra_optimizer_grouped_parameters(model, encoder, learning_rate, wei
         lambda n, _: 'bert' in n.lower() and not any(f'layer.{i}' in n for i in range(12)) and any(nd in n for nd in no_decay)
     )
 
-    if other_bert_params_decay:
-        param_groups.append({
-            'params': other_bert_params_decay,
-            'weight_decay': weight_decay,
-            'lr': learning_rate
-        })
-    if other_bert_params_no_decay:
-        param_groups.append({
-            'params': other_bert_params_no_decay,
-            'weight_decay': 0.0,
-            'lr': learning_rate
-        })
+    append_group(other_bert_params_decay, learning_rate, weight_decay)
+    append_group(other_bert_params_no_decay, learning_rate, 0.0)
 
-    # Image encoder parameters with much lower learning rate
-    encoder_params_decay = filter_params(
-        named_encoder_params,
-        lambda n, _: not any(nd in n for nd in no_decay)
-    )
-    encoder_params_no_decay = filter_params(
-        named_encoder_params,
-        lambda n, _: any(nd in n for nd in no_decay)
-    )
+    # Image encoder parameters
+    has_clip_visual = any('clip_model' in name for name, _ in named_encoder_params)
+    if has_clip_visual:
+        clip_vis_decay = filter_params(
+            named_encoder_params,
+            lambda n, _: 'clip_model' in n and not any(nd in n for nd in no_decay)
+        )
+        clip_vis_no_decay = filter_params(
+            named_encoder_params,
+            lambda n, _: 'clip_model' in n and any(nd in n for nd in no_decay)
+        )
+        clip_proj_decay = filter_params(
+            named_encoder_params,
+            lambda n, _: 'projection' in n and not any(nd in n for nd in no_decay)
+        )
+        clip_proj_no_decay = filter_params(
+            named_encoder_params,
+            lambda n, _: 'projection' in n and any(nd in n for nd in no_decay)
+        )
 
-    if encoder_params_decay:
-        param_groups.append({
-            'params': encoder_params_decay,
-            'weight_decay': weight_decay * 0.5,
-            'lr': learning_rate * 0.05  # Much lower for pre-trained CNN
-        })
-    if encoder_params_no_decay:
-        param_groups.append({
-            'params': encoder_params_no_decay,
-            'weight_decay': 0.0,
-            'lr': learning_rate * 0.05
-        })
+        append_group(clip_vis_decay, learning_rate * clip_lr_scale, weight_decay * 0.5)
+        append_group(clip_vis_no_decay, learning_rate * clip_lr_scale, 0.0)
+        append_group(clip_proj_decay, learning_rate * clip_projection_lr_scale, weight_decay)
+        append_group(clip_proj_no_decay, learning_rate * clip_projection_lr_scale, 0.0)
 
+        # Any other encoder parameters (e.g., attention maps) fall back to projection scale
+        other_encoder_params = filter_params(
+            named_encoder_params,
+            lambda n, _: ('clip_model' not in n and 'projection' not in n)
+        )
+        append_group(other_encoder_params, learning_rate * clip_projection_lr_scale, weight_decay)
+    else:
+        # ResNet or other encoders – keep smaller LR
+        encoder_params_decay = filter_params(
+            named_encoder_params,
+            lambda n, _: not any(nd in n for nd in no_decay)
+        )
+        encoder_params_no_decay = filter_params(
+            named_encoder_params,
+            lambda n, _: any(nd in n for nd in no_decay)
+        )
+        append_group(encoder_params_decay, learning_rate * clip_lr_scale, weight_decay * 0.5)
+        append_group(encoder_params_no_decay, learning_rate * clip_lr_scale, 0.0)
+    
     # Classifier parameters with higher learning rate
     classifier_params_decay = filter_params(
         named_model_params,
@@ -279,30 +299,15 @@ def create_ultra_optimizer_grouped_parameters(model, encoder, learning_rate, wei
         lambda n, _: 'classifier' in n.lower() and any(nd in n for nd in no_decay)
     )
 
-    if classifier_params_decay:
-        param_groups.append({
-            'params': classifier_params_decay,
-            'weight_decay': weight_decay,
-            'lr': learning_rate * 2.0  # Higher for classifier
-        })
-    if classifier_params_no_decay:
-        param_groups.append({
-            'params': classifier_params_no_decay,
-            'weight_decay': 0.0,
-            'lr': learning_rate * 2.0
-        })
+    append_group(classifier_params_decay, learning_rate * 2.0, weight_decay)
+    append_group(classifier_params_no_decay, learning_rate * 2.0, 0.0)
 
     # Catch-all: include any remaining trainable params not already covered
     remaining_params = [
         p for _, p in named_model_params + named_encoder_params
         if p.requires_grad and id(p) not in seen_params
     ]
-    if remaining_params:
-        param_groups.append({
-            'params': remaining_params,
-            'weight_decay': weight_decay,
-            'lr': learning_rate
-        })
+    append_group(remaining_params, learning_rate, weight_decay)
 
     return param_groups
 
@@ -662,6 +667,8 @@ def main():
     parser.add_argument('--crop_size', type=int, default=224, help='crop size of image')
     parser.add_argument('--path_image', default='../pytorch-pretrained-BERT/twitter_subimages/', help='path to images')
     parser.add_argument('--mm_model', default='TomBert', help='model name')
+    parser.add_argument('--use_clip', action='store_true', default=False, help='Use CLIP instead of ResNet for image encoding')
+    parser.add_argument('--clip_model', default='ViT-B/32', choices=['ViT-B/32', 'ViT-B/16', 'ViT-L/14', 'RN50', 'RN101', 'RN50x4', 'RN50x16'], help='CLIP model to use')
     parser.add_argument('--pooling', default='concat', help='pooling method')
     parser.add_argument('--bertlayer', action='store_true', help='whether to add another bert layer')
     parser.add_argument('--tfn', action='store_true', help='whether to use TFN')
@@ -677,6 +684,12 @@ def main():
     parser.add_argument('--focal_gamma', type=float, default=2.0, help='Focal loss gamma')
     parser.add_argument('--target_accuracy', type=float, default=0.95, help='Target accuracy to achieve')
     parser.add_argument('--max_training_hours', type=int, default=72, help='Maximum training hours (default: 72 hours = 3 days)')
+    parser.add_argument('--gradient_clip_norm', type=float, default=0.0, help='Gradient clipping norm (0 to disable)')
+    parser.add_argument('--min_learning_rate', type=float, default=0.0, help='Minimum learning rate floor for schedulers')
+    parser.add_argument('--clip_freeze_epochs', type=int, default=0, help='Epochs to keep CLIP visual encoder frozen')
+    parser.add_argument('--clip_lr_scale', type=float, default=0.05, help='Learning rate multiplier for CLIP visual encoder/backbone')
+    parser.add_argument('--clip_projection_lr_scale', type=float, default=1.0, help='Learning rate multiplier for CLIP projection head')
+    parser.add_argument('--use_class_balanced_sampler', action='store_true', default=False, help='Use class-balanced weighted sampler for training data')
 
     args = parser.parse_args()
 
@@ -816,40 +829,108 @@ def main():
                                                                 num_labels=num_labels,
                                                                 pooling=args.pooling)
     
-    # Initialize image encoder (ResNet-152). Fallback to torchvision pretrained if local weights missing.
-    resnet_weights_path = os.path.join(args.resnet_root, 'resnet152.pth')
-    if os.path.isfile(resnet_weights_path):
-        net = getattr(resnet, 'resnet152')()
-        net.load_state_dict(torch.load(resnet_weights_path, weights_only=False))
-        logger.info(f"Loaded ResNet-152 weights from {resnet_weights_path}")
-    else:
-        logger.warning(f"ResNet weights not found at {resnet_weights_path}. Falling back to torchvision pretrained ResNet-152.")
-        if TORCHVISION_HAS_WEIGHTS:
-            net = tv_resnet152(weights=ResNet152_Weights.IMAGENET1K_V2)
+    # Initialize image encoder (CLIP or ResNet-152)
+    if args.use_clip and CLIP_AVAILABLE:
+        try:
+            logger.info(f"Initializing CLIP image encoder with model: {args.clip_model}")
+            encoder = CLIPImageEncoder(
+                clip_model_name=args.clip_model,
+                if_fine_tune=args.fine_tune_cnn,
+                device=device,
+                output_dim=2048  # Match ResNet output dimension
+            )
+            logger.info(f"✅ CLIP image encoder initialized successfully with {args.clip_model}")
+        except Exception as e:
+            logger.error(f"Failed to initialize CLIP encoder: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+            logger.info("Falling back to ResNet-152...")
+            args.use_clip = False
+    
+    if not args.use_clip:
+        # Initialize ResNet-152 encoder (default)
+        resnet_weights_path = os.path.join(args.resnet_root, 'resnet152.pth')
+        if os.path.isfile(resnet_weights_path):
+    net = getattr(resnet, 'resnet152')()
+            net.load_state_dict(torch.load(resnet_weights_path, weights_only=False))
+            logger.info(f"Loaded ResNet-152 weights from {resnet_weights_path}")
         else:
-            # Older torchvision API
-            net = tv_resnet152(pretrained=True)
+            logger.warning(f"ResNet weights not found at {resnet_weights_path}. Falling back to torchvision pretrained ResNet-152.")
+            if TORCHVISION_HAS_WEIGHTS:
+                net = tv_resnet152(weights=ResNet152_Weights.IMAGENET1K_V2)
+            else:
+                # Older torchvision API
+                net = tv_resnet152(pretrained=True)
     encoder = myResnet(net, args.fine_tune_cnn, device)
     
     # Mixed precision: only enable half() if Apex is available; otherwise keep float32
     apex_installed = False
     if args.fp16:
         try:
-            import apex  # noqa: F401
+            from apex.optimizers import FP16_Optimizer
+            from apex.optimizers import FusedAdam
             apex_installed = True
+            logger.info("✅ Apex is available. FP16 (mixed precision) will be enabled.")
         except ImportError:
             apex_installed = False
-            logger.warning("Apex is not installed. Disabling fp16 and using float32.")
+            logger.warning("⚠️  Apex is not installed. Disabling fp16 and using float32.")
             args.fp16 = False
-    if args.fp16 and apex_installed:
-        model.half()
-        encoder.half()
-    else:
-        model.float()
-        encoder.float()
     
+    # CRITICAL: Ensure model and encoder are in float32 first (before any conversion)
+    model = model.float()
+    encoder = encoder.float()
     model.to(device)
     encoder.to(device)
+    
+    # CRITICAL: CLIP encoder cannot use FP16 (layer norm requires float32)
+    # Only ResNet encoder can use FP16, and only if Apex is available
+    if args.fp16 and apex_installed:
+        if args.use_clip:
+            logger.info("⚠️  CLIP encoder detected. CLIP requires float32 (not FP16 compatible).")
+            logger.info("   Keeping both model and encoder in float32 for stability.")
+            # Don't convert to FP16 when using CLIP
+            model = model.float()
+            encoder = encoder.float()
+        else:
+            # ResNet can use FP16
+            logger.info("Converting model and encoder to FP16 (half precision) for ResNet...")
+            model = model.half()
+            encoder = encoder.half()
+    else:
+        # Ensure both are in float32
+        logger.info("Using float32 precision (FP16 disabled or Apex not available).")
+        model = model.float()
+        encoder = encoder.float()
+        # Force disable fp16 if not available
+        args.fp16 = False
+    
+    # Move to device after dtype conversion
+    model.to(device)
+    encoder.to(device)
+    
+    # Verify precision and ensure consistency
+    model_dtype = next(model.parameters()).dtype
+    encoder_dtype = next(encoder.parameters()).dtype
+    logger.info(f"✅ Model dtype: {model_dtype}, Encoder dtype: {encoder_dtype}")
+    
+    # CRITICAL: For ResNet, model and encoder MUST have the same dtype
+    if not args.use_clip and model_dtype != encoder_dtype:
+        logger.error(f"❌ ERROR: Model and encoder dtype mismatch! Model: {model_dtype}, Encoder: {encoder_dtype}")
+        logger.error("   Fixing by converting both to float32...")
+        model = model.float()
+        encoder = encoder.float()
+        model.to(device)
+        encoder.to(device)
+        args.fp16 = False  # Disable FP16 if we had to fix dtype mismatch
+        logger.info("✅ Fixed: Both model and encoder are now float32")
+    
+    # Final verification
+    model_dtype = next(model.parameters()).dtype
+    encoder_dtype = next(encoder.parameters()).dtype
+    if model_dtype != encoder_dtype:
+        raise RuntimeError(f"FATAL: Cannot fix dtype mismatch! Model: {model_dtype}, Encoder: {encoder_dtype}")
+    
+    logger.info(f"✅ Final dtype check: Model={model_dtype}, Encoder={encoder_dtype} (match: {model_dtype == encoder_dtype})")
     
     if args.local_rank != -1:
         try:
@@ -863,8 +944,14 @@ def main():
         encoder = torch.nn.DataParallel(encoder)
 
     # ULTRA OPTIMIZED: Prepare ultra optimizer with layer-wise learning rates
+    # Increased weight decay to 0.02 for better regularization against overfitting
     optimizer_grouped_parameters = create_ultra_optimizer_grouped_parameters(
-        model, encoder, args.learning_rate, weight_decay=0.01
+        model,
+        encoder,
+        args.learning_rate,
+        weight_decay=0.02,  # Increased from 0.01 for better regularization
+        clip_lr_scale=args.clip_lr_scale,
+        clip_projection_lr_scale=args.clip_projection_lr_scale
     )
     
     t_total = num_train_steps
@@ -875,22 +962,26 @@ def main():
         try:
             from apex.optimizers import FP16_Optimizer
             from apex.optimizers import FusedAdam
-            optimizer = FusedAdam(optimizer_grouped_parameters,
-                                  lr=args.learning_rate,
-                                  bias_correction=False,
-                                  max_grad_norm=1.0)
-            if args.loss_scale == 0:
-                optimizer = FP16_Optimizer(optimizer, dynamic_loss_scale=True)
-            else:
-                optimizer = FP16_Optimizer(optimizer, static_loss_scale=args.loss_scale)
+            optimizer = FusedAdam(
+                optimizer_grouped_parameters,
+                              lr=args.learning_rate,
+                              bias_correction=False,
+                max_grad_norm=1.0
+            )
+        if args.loss_scale == 0:
+            optimizer = FP16_Optimizer(optimizer, dynamic_loss_scale=True)
+        else:
+            optimizer = FP16_Optimizer(optimizer, static_loss_scale=args.loss_scale)
             logger.info("Using Apex FP16 optimizer (FusedAdam).")
         except ImportError:
             logger.warning("Apex is not installed. Disabling fp16 and continuing with standard optimizer.")
             args.fp16 = False
-            optimizer = BertAdam(optimizer_grouped_parameters,
-                                 lr=args.learning_rate,
-                                 warmup=args.warmup_proportion,
-                                 t_total=t_total)
+            optimizer = BertAdam(
+                optimizer_grouped_parameters,
+                lr=args.learning_rate,
+                warmup=args.warmup_proportion,
+                t_total=t_total
+            )
     else:
         optimizer = BertAdam(optimizer_grouped_parameters,
                              lr=args.learning_rate,
@@ -952,7 +1043,14 @@ def main():
                                    all_s2_input_ids, all_s2_input_mask, all_s2_segment_ids,
                                    all_img_feats, all_label_ids)
         
-        if args.local_rank == -1:
+        if args.local_rank == -1 and args.use_class_balanced_sampler:
+            label_counts = torch.bincount(all_label_ids, minlength=num_labels).float()
+            label_counts = torch.clamp(label_counts, min=1.0)
+            weights_per_class = 1.0 / label_counts
+            sample_weights = weights_per_class[all_label_ids]
+            train_sampler = WeightedRandomSampler(sample_weights, len(sample_weights), replacement=True)
+            logger.info("Using class-balanced WeightedRandomSampler for training data")
+        elif args.local_rank == -1:
             train_sampler = RandomSampler(train_data)
         else:
             train_sampler = DistributedSampler(train_data)
@@ -989,6 +1087,9 @@ def main():
         patience_counter = 0
         target_reached = False
         
+        clip_encoder_module = encoder.module if hasattr(encoder, 'module') else encoder
+        clip_visual_frozen_state = None
+        
         logger.info("🚀 *************** Running ULTRA OPTIMIZED training ***************")
         logger.info(f"🎯 Target: {args.target_accuracy*100:.1f}% accuracy")
         logger.info(f"⏱️  Max time: {args.max_training_hours} hours")
@@ -1016,6 +1117,20 @@ def main():
             
             model.train()
             encoder.train()
+            
+            # Dynamic CLIP freezing/unfreezing
+            if args.use_clip and hasattr(clip_encoder_module, 'clip_model') and args.clip_freeze_epochs > 0:
+                freeze_visual = train_idx < args.clip_freeze_epochs
+                if clip_visual_frozen_state is None or freeze_visual != clip_visual_frozen_state:
+                    state_msg = "🔒 Freezing" if freeze_visual else "🔓 Unfreezing"
+                    logger.info(f"{state_msg} CLIP visual backbone (epoch {train_idx + 1})")
+                    for param in clip_encoder_module.clip_model.parameters():
+                        param.requires_grad = not freeze_visual
+                    clip_encoder_module.clip_model.train(not freeze_visual)
+                    clip_visual_frozen_state = freeze_visual
+                elif freeze_visual:
+                    clip_encoder_module.clip_model.train(False)
+
             encoder.zero_grad()
             tr_loss = 0
             nb_tr_examples, nb_tr_steps = 0, 0
@@ -1040,8 +1155,23 @@ def main():
                 input_ids, input_mask, added_input_mask, segment_ids, s2_input_ids, s2_input_mask, s2_segment_ids, \
                 img_feats, label_ids = batch
                 
+                # CRITICAL: Ensure input dtype matches encoder dtype
+                encoder_dtype = next(encoder.parameters()).dtype
+                if encoder_dtype == torch.float16:
+                    img_feats = img_feats.half()
+                else:
+                    img_feats = img_feats.float()
+                
                 with torch.no_grad():
                     imgs_f, img_mean, img_att = encoder(img_feats)
+                
+                # CRITICAL: Ensure encoder output matches model dtype
+                model_dtype = next(model.parameters()).dtype
+                if model_dtype != img_att.dtype:
+                    if model_dtype == torch.float16:
+                        img_att = img_att.half()
+                    else:
+                        img_att = img_att.float()
                 
                 # Forward pass
                 logits = model(input_ids, s2_input_ids, img_att, segment_ids, s2_segment_ids, 
@@ -1071,16 +1201,28 @@ def main():
                 if (step + 1) % args.gradient_accumulation_steps == 0:
                     # ULTRA OPTIMIZED: Use cosine schedule with restarts
                     if args.use_cosine_schedule:
-                        lr_this_step = args.learning_rate * ultra_cosine_schedule_with_restarts(
+                        lr_factor = ultra_cosine_schedule_with_restarts(
                             global_step, t_total, int(t_total * args.warmup_proportion), restart_cycles=3
                         )
                     else:
-                        lr_this_step = args.learning_rate * warmup_linear(
+                        lr_factor = warmup_linear(
                             global_step/t_total, args.warmup_proportion
                         )
                     
                     for param_group in optimizer.param_groups:
+                        base_lr = param_group.get('initial_lr', args.learning_rate)
+                        lr_this_step = base_lr * lr_factor
+                        if args.min_learning_rate > 0:
+                            lr_this_step = max(lr_this_step, args.min_learning_rate)
                         param_group['lr'] = lr_this_step
+                    
+                    if args.gradient_clip_norm > 0 and not args.fp16:
+                        model_base = model.module if hasattr(model, 'module') else model
+                        encoder_base = encoder.module if hasattr(encoder, 'module') else encoder
+                        clip_params = [p for p in chain(model_base.parameters(), encoder_base.parameters())
+                                       if p.requires_grad and p.grad is not None]
+                        if clip_params:
+                            torch.nn.utils.clip_grad_norm_(clip_params, args.gradient_clip_norm)
                     
                     optimizer.step()
                     optimizer.zero_grad()
@@ -1130,8 +1272,24 @@ def main():
                 img_feats = img_feats.to(device)
                 label_ids = label_ids.to(device)
 
+                # CRITICAL: Ensure input dtype matches encoder dtype
+                encoder_dtype = next(encoder.parameters()).dtype
+                if encoder_dtype == torch.float16:
+                    img_feats = img_feats.half()
+                else:
+                    img_feats = img_feats.float()
+
                 with torch.no_grad():
                     imgs_f, img_mean, img_att = encoder(img_feats)
+                    
+                    # CRITICAL: Ensure encoder output matches model dtype
+                    model_dtype = next(model.parameters()).dtype
+                    if model_dtype != img_att.dtype:
+                        if model_dtype == torch.float16:
+                            img_att = img_att.half()
+                        else:
+                            img_att = img_att.float()
+                    
                     logits = model(input_ids, s2_input_ids, img_att, segment_ids, s2_segment_ids, 
                                  input_mask, s2_input_mask, added_input_mask)
                     
@@ -1350,8 +1508,24 @@ def main():
             img_feats = img_feats.to(device)
             label_ids = label_ids.to(device)
 
+            # CRITICAL: Ensure input dtype matches encoder dtype
+            encoder_dtype = next(encoder.parameters()).dtype
+            if encoder_dtype == torch.float16:
+                img_feats = img_feats.half()
+            else:
+                img_feats = img_feats.float()
+
             with torch.no_grad():
                 imgs_f, img_mean, img_att = encoder(img_feats)
+                
+                # CRITICAL: Ensure encoder output matches model dtype
+                model_dtype = next(model.parameters()).dtype
+                if model_dtype != img_att.dtype:
+                    if model_dtype == torch.float16:
+                        img_att = img_att.half()
+                    else:
+                        img_att = img_att.float()
+                
                 logits = model(input_ids, s2_input_ids, img_att, segment_ids, s2_segment_ids, 
                              input_mask, s2_input_mask, added_input_mask)
                 tmp_eval_loss = torch.nn.functional.cross_entropy(logits, label_ids)

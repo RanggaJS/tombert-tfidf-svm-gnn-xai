@@ -181,8 +181,8 @@ class UltraImageFeatureExtractor:
     def extract_features(self, img_path):
         """Extract ultra comprehensive image features"""
         try:
-            img = cv2.imread(img_path)
-            if img is None:
+                img = cv2.imread(img_path)
+                if img is None:
                 return np.zeros(500)  # Increased feature size
                 
             img = cv2.resize(img, self.target_size)
@@ -196,8 +196,8 @@ class UltraImageFeatureExtractor:
             
             # Combine all features
             all_features = np.concatenate([
-                color_features,
-                texture_features, 
+                    color_features,
+                    texture_features, 
                 edge_features,
                 statistical_features,
                 shape_features
@@ -210,8 +210,7 @@ class UltraImageFeatureExtractor:
                 all_features = all_features[:500]
             
             return all_features
-                
-        except Exception as e:
+            except Exception as e:
             logger.warning(f"Error extracting features from {img_path}: {e}")
             return np.zeros(500)
     
@@ -262,7 +261,7 @@ class UltraImageFeatureExtractor:
         for radius in [1, 2, 3]:
             lbp = self._compute_lbp_radius(gray, radius)
             hist_lbp, _ = np.histogram(lbp.ravel(), bins=32, range=(0, 256))
-            hist_lbp = hist_lbp / (hist_lbp.sum() + 1e-7)
+        hist_lbp = hist_lbp / (hist_lbp.sum() + 1e-7)
             features.extend(hist_lbp)
         
         # Gabor filters with multiple orientations and frequencies
@@ -303,7 +302,7 @@ class UltraImageFeatureExtractor:
         # Canny with different thresholds
         for low, high in [(50, 150), (100, 200), (30, 100)]:
             edges = cv2.Canny(gray, low, high)
-            edge_density = np.sum(edges > 0) / edges.size
+        edge_density = np.sum(edges > 0) / edges.size
             features.append(edge_density)
         
         # Sobel in different directions
@@ -346,7 +345,7 @@ class UltraImageFeatureExtractor:
         ])
         
         return np.array(features)
-    
+
     def _extract_shape_features(self, img):
         """Extract shape-based features"""
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -404,7 +403,8 @@ class UltraTFIDFSVMClassifier:
     
     def __init__(self, max_features=200000, ngram_range=(1, 4), random_state=42, 
                  use_extensive_search=True, use_images=True, use_pca=True, 
-                 use_feature_selection=True, use_ensemble=True, progress_callback=None):
+                 use_feature_selection=True, use_ensemble=True, progress_callback=None,
+                 n_iter=50, cv_folds=5):
         self.max_features = max_features
         self.ngram_range = ngram_range
         self.random_state = random_state
@@ -414,6 +414,8 @@ class UltraTFIDFSVMClassifier:
         self.use_feature_selection = use_feature_selection
         self.use_ensemble = use_ensemble
         self.progress_callback = progress_callback
+        self.n_iter = n_iter  # Number of hyperparameter search iterations
+        self.cv_folds = cv_folds  # Number of CV folds
         
         # Ultra text preprocessor
         self.text_preprocessor = UltraTextPreprocessor()
@@ -421,16 +423,16 @@ class UltraTFIDFSVMClassifier:
         # Multiple TF-IDF vectorizers for ensemble
         self.tfidf_vectorizers = [
             TfidfVectorizer(
-                max_features=max_features,
-                ngram_range=ngram_range,
-                stop_words='english',
-                lowercase=True,
-                min_df=2,
-                max_df=0.85,
-                sublinear_tf=True,
-                use_idf=True,
-                smooth_idf=True,
-                norm='l2',
+            max_features=max_features,
+            ngram_range=ngram_range,
+            stop_words='english',
+            lowercase=True,
+            min_df=2,
+            max_df=0.85,
+            sublinear_tf=True,
+            use_idf=True,
+            smooth_idf=True,
+            norm='l2',
                 token_pattern=r'\b\w+\b',
                 analyzer='word'
             ),
@@ -447,7 +449,7 @@ class UltraTFIDFSVMClassifier:
                 norm='l1',
                 token_pattern=r'\b\w+\b',
                 analyzer='char_wb'
-            )
+        )
         ]
         
         # Image feature extractor
@@ -527,9 +529,9 @@ class UltraTFIDFSVMClassifier:
         # Multiple TF-IDF features
         tfidf_features_list = []
         for i, vectorizer in enumerate(self.tfidf_vectorizers):
-            if fit:
+        if fit:
                 features = vectorizer.fit_transform(processed_texts)
-            else:
+        else:
                 features = vectorizer.transform(processed_texts)
             tfidf_features_list.append(features)
         
@@ -583,8 +585,8 @@ class UltraTFIDFSVMClassifier:
         # Use RandomizedSearchCV for efficiency with extensive search
         search = RandomizedSearchCV(
             svm, param_distributions, 
-            n_iter=200,  # More iterations for better results
-            cv=StratifiedKFold(n_splits=10, shuffle=True, random_state=self.random_state),
+            n_iter=self.n_iter,  # Configurable iterations
+            cv=StratifiedKFold(n_splits=self.cv_folds, shuffle=True, random_state=self.random_state),
             scoring='f1_macro', 
             n_jobs=-1, 
             verbose=0,
@@ -603,7 +605,7 @@ class UltraTFIDFSVMClassifier:
                 n_splits = search.cv.get_n_splits(X_train, y_train)
             else:
                 # Fallback split count
-                n_splits = 10
+                n_splits = self.cv_folds
             total_fits = int(search.n_iter * n_splits)
             completed_fits = {'count': 0}
             
@@ -736,7 +738,7 @@ class UltraTFIDFSVMClassifier:
                 image_scaled * 1.5       # Increased image weight
             ])
         else:
-            combined_features = np.hstack([
+        combined_features = np.hstack([
                 text_scaled * 3.0,
                 sentiment_scaled * 2.0
             ])
@@ -765,8 +767,8 @@ class UltraTFIDFSVMClassifier:
         else:
             if self.use_extensive_search:
                 self.svm_classifier = self._perform_extensive_search(combined_features, labels)
-            else:
-                self.svm_classifier.fit(combined_features, labels)
+        else:
+        self.svm_classifier.fit(combined_features, labels)
         step += 1
         self._update_progress("fit_pipeline", step, pipeline_steps, "Classifier training completed")
         
@@ -779,7 +781,7 @@ class UltraTFIDFSVMClassifier:
         """Make predictions with batched progress updates"""
         if not self.is_fitted:
             raise ValueError("Model must be trained before prediction")
-
+        
         n = len(texts)
         preds_all = []
         probs_all = []
@@ -797,11 +799,11 @@ class UltraTFIDFSVMClassifier:
             # Extract features for batch
             tfidf_features, sentiment_features = self.extract_text_features(texts_batch, fit=False)
             image_features = self.extract_image_features(images_batch, phase=f"{phase}_image_extraction")
-
-            # Convert and transform
-            tfidf_dense = tfidf_features.toarray()
-
-            if self.use_pca:
+        
+        # Convert and transform
+        tfidf_dense = tfidf_features.toarray()
+        
+        if self.use_pca:
                 tfidf_pca = self.pca_text.transform(tfidf_dense)
                 tfidf_svd = self.svd_text.transform(tfidf_dense)
                 tfidf_reduced = np.hstack([tfidf_pca, tfidf_svd])
@@ -815,8 +817,8 @@ class UltraTFIDFSVMClassifier:
             text_scaled = np.hstack(text_scaled_list)
 
             image_scaled = self.image_scaler.transform(image_features) if self.use_images else image_features
-            sentiment_scaled = self.sentiment_scaler.transform(sentiment_features)
-
+        sentiment_scaled = self.sentiment_scaler.transform(sentiment_features)
+        
             # Combine features with same weights as training
             if self.use_images:
                 combined_features = np.hstack([
@@ -825,7 +827,7 @@ class UltraTFIDFSVMClassifier:
                     image_scaled * 1.5
                 ])
             else:
-                combined_features = np.hstack([
+        combined_features = np.hstack([
                     text_scaled * 3.0,
                     sentiment_scaled * 2.0
                 ])
@@ -833,7 +835,7 @@ class UltraTFIDFSVMClassifier:
             # Apply feature selection
             if self.use_feature_selection and self.feature_selector is not None:
                 combined_features = self.feature_selector.transform(combined_features)
-
+        
             # Predict batch
             if self.use_ensemble:
                 batch_preds = self.classifiers.predict(combined_features)
@@ -849,7 +851,7 @@ class UltraTFIDFSVMClassifier:
 
         predictions = np.concatenate(preds_all, axis=0) if len(preds_all) > 0 else np.array([])
         probabilities = np.vstack(probs_all) if len(probs_all) > 0 else np.array([])
-
+        
         return predictions, probabilities
     
     def evaluate(self, texts, image_paths, labels, phase="evaluation", batch_size=256):

@@ -1,0 +1,23 @@
+================================================================================
+OPTIMIZED GNN CLASSIFICATION REPORT
+================================================================================
+
+Dataset: twitter2015_rumor
+Test Accuracy: 0.88042
+Test F1-Score (Macro): 0.57024
+Test F1-Score (Rumor): 0.20513
+Rumor Precision: 0.12698
+Rumor Recall: 0.53333
+Optimal Threshold: 0.750
+Training Time: 29.70 seconds
+
+              precision    recall  f1-score   support
+
+   non-rumor    0.98463   0.89076   0.93535      1007
+       rumor    0.12698   0.53333   0.20513        30
+
+    accuracy                        0.88042      1037
+   macro avg    0.55581   0.71205   0.57024      1037
+weighted avg    0.95982   0.88042   0.91422      1037
+
+================================================================================

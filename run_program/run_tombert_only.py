@@ -47,32 +47,40 @@ class UltraOptimizedTomBERTConfig:
         self.max_seq_length = 128  # Increased for better context understanding
         self.max_entity_length = 32  # Increased for better entity representation
         
-        # Training hyperparameters (ULTRA OPTIMIZED for 95%+ accuracy)
-        # IMPROVED: More aggressive settings based on analysis
-        self.train_batch_size = 16  # Smaller for better gradient estimation
-        self.eval_batch_size = 16
-        self.learning_rate = 2e-5  # INCREASED: More aggressive (was 1e-5)
-        self.num_train_epochs = 200  # Extended epochs for prolonged ultra training
-        self.warmup_proportion = 0.1  # REDUCED: Faster warmup (was 0.25)
-        self.gradient_accumulation_steps = 4  # Effective batch size = 16*4 = 64
+        # Training hyperparameters - ANTI-OVERFITTING CONFIG
+        # Increased batch size and lower LR to reduce overfitting
+        self.train_batch_size = 20  # Increased from 16
+        self.eval_batch_size = 20
+        self.learning_rate = 3e-6  # Much lower to prevent overfitting (was 8e-6)
+        self.num_train_epochs = 150  # More epochs with better regularization
+        self.warmup_proportion = 0.15  # Longer warmup for stability
+        self.gradient_accumulation_steps = 6  # Effective batch size = 120 (was 64)
         
-        # ULTRA Optimization settings
-        self.label_smoothing = 0.15  # REDUCED: Less aggressive smoothing (was 0.2)
+        # ULTRA Optimization settings - More conservative
+        self.label_smoothing = 0.05  # Reduced from 0.1 to prevent overconfidence
         self.use_ema = True
-        self.ema_decay = 0.9999  # Very slow decay for stability
+        self.ema_decay = 0.9995  # Slightly faster decay for better adaptation
         self.use_cosine_schedule = True
-        self.early_stopping_patience = 20  # INCREASED: More patient (was 10)
+        self.early_stopping_patience = 12  # More patience to allow recovery (was 5)
         self.use_focal_loss = True  # For class imbalance
-        self.focal_alpha = 1.0
-        self.focal_gamma = 2.0
+        self.focal_alpha = 0.75
+        self.focal_gamma = 1.0  # Reduced from 1.5 (less aggressive)
+        self.gradient_clip_norm = 0.5  # Tighter clipping (was 1.0)
+        self.min_learning_rate = 5e-8  # Lower minimum LR
         
         # Target and time settings
         self.target_accuracy = 0.95  # 95% target
         self.max_training_hours = 72  # 3 days
         
-        # Image processing (enhanced)
+        # Image processing / encoder strategy - switch to ResNet backbone
         self.crop_size = 224
         self.fine_tune_cnn = True
+        self.use_clip = False  # Force ResNet-152 encoder per latest request
+        self.clip_model = 'ViT-B/32'
+        self.clip_freeze_epochs = 15  # Longer freeze period (was 8) to stabilize text first
+        self.clip_lr_scale = 0.05  # Much lower CLIP LR (was 0.1) to prevent overfitting
+        self.clip_projection_lr_scale = 0.5  # Lower projection LR too (was 1.0)
+        self.use_class_balanced_sampler = True
         
         # Mixed precision and optimization
         self.fp16 = True
@@ -108,6 +116,11 @@ class UltraOptimizedTomBERTConfig:
             '--early_stopping_patience', str(self.early_stopping_patience),
             '--focal_alpha', str(self.focal_alpha),
             '--focal_gamma', str(self.focal_gamma),
+            '--gradient_clip_norm', str(self.gradient_clip_norm),
+            '--min_learning_rate', str(self.min_learning_rate),
+            '--clip_freeze_epochs', str(self.clip_freeze_epochs),
+            '--clip_lr_scale', str(self.clip_lr_scale),
+            '--clip_projection_lr_scale', str(self.clip_projection_lr_scale),
             '--target_accuracy', str(self.target_accuracy),
             '--max_training_hours', str(self.max_training_hours),
             '--crop_size', str(self.crop_size),
@@ -132,6 +145,11 @@ class UltraOptimizedTomBERTConfig:
             args.append('--use_cosine_schedule')
         if self.use_focal_loss:
             args.append('--use_focal_loss')
+        if self.use_clip:
+            args.append('--use_clip')
+            args.extend(['--clip_model', self.clip_model])
+        if self.use_class_balanced_sampler:
+            args.append('--use_class_balanced_sampler')
         
         return args
     
@@ -254,6 +272,7 @@ def run_ultra_tombert_experiment(config, gpu_id=0):
     print(f"🔄 Cosine Schedule:        {config.use_cosine_schedule}")
     print(f"⏳ Early Stop Patience:    {config.early_stopping_patience}")
     print(f"🖼️  Image Crop Size:        {config.crop_size}")
+    print(f"🖼️  Image Encoder:          {'CLIP ' + config.clip_model + ' (recommended)' if config.use_clip else 'ResNet-152'}")
     print(f"🔧 Pooling Method:         {config.pooling}")
     print(f"💾 Mixed Precision:        {config.fp16}")
     print("-" * 100)
@@ -629,6 +648,18 @@ Examples:
                        help='EMA decay rate (0.9999 for stability)')
     parser.add_argument('--early_stopping_patience', type=int, default=10,
                        help='Early stopping patience (10 for 95% target)')
+    parser.add_argument('--gradient_clip_norm', type=float, default=1.0,
+                       help='Gradient clipping norm (0 to disable)')
+    parser.add_argument('--min_learning_rate', type=float, default=1e-7,
+                       help='Minimum LR after scheduling (0 keeps original behavior)')
+    parser.add_argument('--clip_freeze_epochs', type=int, default=8,
+                       help='Number of initial epochs to keep CLIP visual encoder frozen')
+    parser.add_argument('--clip_lr_scale', type=float, default=0.1,
+                       help='Learning-rate multiplier for CLIP visual encoder')
+    parser.add_argument('--clip_projection_lr_scale', type=float, default=1.0,
+                       help='Learning-rate multiplier for CLIP projection head')
+    parser.add_argument('--no_class_balanced_sampler', action='store_true',
+                       help='Disable class-balanced sampling for training data')
     
     # Loss function options
     parser.add_argument('--no_focal_loss', action='store_true',
@@ -679,6 +710,12 @@ Examples:
     config.use_focal_loss = not args.no_focal_loss
     config.focal_alpha = args.focal_alpha
     config.focal_gamma = args.focal_gamma
+    config.gradient_clip_norm = args.gradient_clip_norm
+    config.min_learning_rate = args.min_learning_rate
+    config.clip_freeze_epochs = args.clip_freeze_epochs
+    config.clip_lr_scale = args.clip_lr_scale
+    config.clip_projection_lr_scale = args.clip_projection_lr_scale
+    config.use_class_balanced_sampler = not args.no_class_balanced_sampler
     config.use_ema = not args.no_ema
     config.use_cosine_schedule = not args.no_cosine_schedule
     config.fp16 = not args.no_fp16

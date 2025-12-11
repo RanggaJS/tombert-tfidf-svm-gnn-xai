@@ -1,0 +1,60 @@
+{
+    "method": "Advanced GNN with Attention (Optimized for Rumor F1)",
+    "dataset": "twitter2015_rumor",
+    "test_accuracy": 0.8804243008678881,
+    "test_f1_macro": 0.5702387636694206,
+    "test_f1_rumor": 0.20512820512820512,
+    "test_precision_rumor": 0.12698412698412698,
+    "test_recall_rumor": 0.5333333333333333,
+    "training_time": 29.69843816757202,
+    "optimal_threshold": 0.75,
+    "optimizations": {
+        "focal_loss_gamma": 3.0,
+        "class_weight_boost": "3-5x for minority (reduced)",
+        "oversampling": "SMOTE + additional balancing",
+        "threshold_tuning": "0.6-0.85 (finer tuning)",
+        "scheduler": "CosineAnnealingWarmRestarts",
+        "optimization_focus": "Rumor F1 prioritized (60% weight) + macro F1 (30%) + precision (10%)",
+        "early_stopping": "Based on rumor F1 > 0.15 or macro F1 > 0.50"
+    },
+    "config": {
+        "dataset": "twitter2015_rumor",
+        "data_dir": "./output/rumor_labeled",
+        "output_dir": "./output/gnn_optimized_twitter2015_rumor",
+        "embedding_dim": 300,
+        "hidden_dim": 512,
+        "num_heads": 8,
+        "dropout": 0.2,
+        "alpha": 0.15,
+        "use_residual": true,
+        "num_layers": 3,
+        "tfidf_max_features": 2000,
+        "tfidf_ngram": [
+            1,
+            2
+        ],
+        "tfidf_min_df": 2,
+        "maxlen": 50,
+        "kernel_sizes": [
+            2,
+            3,
+            4,
+            5
+        ],
+        "batch_size": 64,
+        "epochs": 50,
+        "learning_rate": 0.0015,
+        "weight_decay": 1e-05,
+        "label_smoothing": 0.05,
+        "gradient_accumulation_steps": 1,
+        "early_stopping_patience": 10,
+        "use_amp": true,
+        "gradient_clip": 1.0,
+        "num_classes": 2,
+        "target_names": [
+            "non-rumor",
+            "rumor"
+        ],
+        "save_path": "./output/gnn_optimized_twitter2015_rumor/best_model.pth"
+    }
+}
