@@ -1,0 +1,232 @@
+nohup: ignoring input
+2025-12-09 11:14:42,983 - __main__ - INFO - Output directory: ./output/tfidf_svm_ultra_optimized_20251209_111442
+2025-12-09 11:14:42,984 - __main__ - INFO - Log file: ./output/tfidf_svm_ultra_optimized_20251209_111442/training_progress.log
+2025-12-09 11:14:43,984 - __main__ - INFO - System Resources - CPU: 100.0%, Memory: 32.5% (10.4GB/31.9GB)
+2025-12-09 11:14:43,985 - __main__ - INFO - STAGE 1: Loading and preparing data...
+2025-12-09 11:14:43,985 - __main__ - INFO - [Progress] stage::data_loading:   0.00% (0/5) | Starting data preparation
+2025-12-09 11:14:43,993 - __main__ - INFO - Data loaded: 3179 train, 1122 dev, 1037 test
+2025-12-09 11:14:44,998 - __main__ - INFO - System Resources - CPU: 100.0%, Memory: 32.5% (10.4GB/31.9GB)
+2025-12-09 11:14:44,999 - __main__ - INFO - Progress saved: data_loading
+2025-12-09 11:14:45,000 - __main__ - INFO - [Progress] stage::data_loading:  20.00% (1/5) | Data loading completed
+2025-12-09 11:14:45,000 - __main__ - INFO - STAGE 2: Initializing ultra classifier...
+2025-12-09 11:14:46,003 - __main__ - INFO - System Resources - CPU: 100.0%, Memory: 32.5% (10.4GB/31.9GB)
+2025-12-09 11:14:46,004 - __main__ - INFO - Progress saved: model_init
+2025-12-09 11:14:46,004 - __main__ - INFO - [Progress] stage::model_initialization:  40.00% (2/5) | Model initialization completed
+2025-12-09 11:14:46,005 - __main__ - INFO - STAGE 3: Starting ultra feature extraction (this will take hours)...
+2025-12-09 11:14:46,005 - __main__ - INFO - [Progress] stage::ultra_training:  40.00% (2/5) | Entering ultra training phase
+2025-12-09 11:14:46,006 - __main__ - INFO - Beginning comprehensive training process...
+2025-12-09 11:14:46,006 - __main__ - INFO - Expected duration: Several hours to 1 day for 80%+ accuracy
+2025-12-09 11:14:46,007 - __main__ - INFO - The model will perform:
+2025-12-09 11:14:46,007 - __main__ - INFO - - Ultra text preprocessing with advanced sentiment analysis
+2025-12-09 11:14:46,007 - __main__ - INFO - - Multiple TF-IDF vectorizations with different parameters
+2025-12-09 11:14:46,008 - __main__ - INFO - - Text-only mode: Image analysis DISABLED (text features only)
+2025-12-09 11:14:46,008 - __main__ - INFO - - Extensive hyperparameter search (50 iterations × 5 folds = 250 fits)
+2025-12-09 11:14:46,009 - __main__ - INFO - - Ensemble training with multiple algorithms
+2025-12-09 11:14:46,009 - __main__ - INFO - - Advanced feature selection and dimensionality reduction
+2025-12-09 11:14:46,009 - classical_methods - INFO - Training ultra enhanced TF-IDF + SVM model...
+2025-12-09 11:14:46,010 - __main__ - INFO - [Progress] fit_pipeline:   0.00% (0/7) | Starting training pipeline
+2025-12-09 11:14:46,010 - classical_methods - INFO - Extracting ultra enhanced text features...
+2025-12-09 11:14:47,246 - __main__ - INFO - [Progress] fit_pipeline:  14.29% (1/7) | Text features extracted
+2025-12-09 11:14:47,247 - __main__ - INFO - [Progress] fit_pipeline:  28.57% (2/7) | Image features extracted
+2025-12-09 11:14:47,403 - classical_methods - INFO - Applying PCA to text features...
+2025-12-09 11:21:42,727 - classical_methods - INFO - Text features reduced to 3247 dimensions
+2025-12-09 11:21:42,727 - __main__ - INFO - [Progress] fit_pipeline:  42.86% (3/7) | Dimensionality reduction applied
+2025-12-09 11:21:43,559 - __main__ - INFO - [Progress] fit_pipeline:  57.14% (4/7) | Features scaled
+2025-12-09 11:21:43,622 - __main__ - INFO - [Progress] fit_pipeline:  71.43% (5/7) | Feature fusion completed
+2025-12-09 11:21:43,622 - classical_methods - INFO - Performing feature selection...
+2025-12-09 11:21:43,837 - classical_methods - INFO - Selected 5000 best features from 9763 total features
+2025-12-09 11:21:43,838 - __main__ - INFO - [Progress] fit_pipeline:  85.71% (6/7) | Feature selection completed
+2025-12-09 11:21:43,838 - classical_methods - INFO - Creating ensemble of classifiers...
+2025-12-09 11:21:43,838 - __main__ - INFO - [Progress] ensemble_training:   0.00% (0/100) | Initializing ensemble training
+2025-12-09 11:21:43,838 - classical_methods - INFO - Performing extensive search for ensemble SVM...
+2025-12-09 11:21:43,838 - classical_methods - INFO - Performing extensive hyperparameter search (this will take a long time)...
+2025-12-09 11:21:43,839 - __main__ - INFO - [Progress] hyperparameter_search:   0.00% (0/100) | Starting extensive search
+
+⚠️  NOTE: This experiment targets 80%+ accuracy
+⚠️  Maximum training time: 72.0 hours
+⚠️  It will use computational resources
+⚠️  Make sure you have sufficient disk space and memory
+⚠️  Progress will be saved regularly to prevent data loss
+⚠️  Logs will be saved in ./output/tfidf_svm_ultra_optimized_[timestamp]/
+2025-12-09 11:25:58,294 - __main__ - INFO - [Progress] hyperparameter_search:   1.20% (3/250) | Hyperparameter search progress (3/250 fits)
+2025-12-09 11:28:25,169 - __main__ - INFO - [Progress] hyperparameter_search:   2.40% (6/250) | Hyperparameter search progress (6/250 fits)
+2025-12-09 11:31:02,904 - __main__ - INFO - [Progress] hyperparameter_search:   3.60% (9/250) | Hyperparameter search progress (9/250 fits)
+2025-12-09 11:32:21,676 - __main__ - INFO - [Progress] hyperparameter_search:   4.80% (12/250) | Hyperparameter search progress (12/250 fits)
+2025-12-09 11:33:18,844 - __main__ - INFO - [Progress] hyperparameter_search:   6.00% (15/250) | Hyperparameter search progress (15/250 fits)
+2025-12-09 11:34:58,235 - __main__ - INFO - [Progress] hyperparameter_search:   7.20% (18/250) | Hyperparameter search progress (18/250 fits)
+2025-12-09 11:38:09,582 - __main__ - INFO - [Progress] hyperparameter_search:   8.40% (21/250) | Hyperparameter search progress (21/250 fits)
+2025-12-09 11:39:47,058 - __main__ - INFO - [Progress] hyperparameter_search:   9.60% (24/250) | Hyperparameter search progress (24/250 fits)
+2025-12-09 11:40:41,814 - __main__ - INFO - [Progress] hyperparameter_search:  10.80% (27/250) | Hyperparameter search progress (27/250 fits)
+2025-12-09 11:43:17,588 - __main__ - INFO - [Progress] hyperparameter_search:  12.00% (30/250) | Hyperparameter search progress (30/250 fits)
+2025-12-09 11:46:27,806 - __main__ - INFO - [Progress] hyperparameter_search:  13.20% (33/250) | Hyperparameter search progress (33/250 fits)
+2025-12-09 11:47:38,002 - __main__ - INFO - [Progress] hyperparameter_search:  14.40% (36/250) | Hyperparameter search progress (36/250 fits)
+2025-12-09 11:52:07,895 - __main__ - INFO - [Progress] hyperparameter_search:  15.60% (39/250) | Hyperparameter search progress (39/250 fits)
+2025-12-09 11:53:02,810 - __main__ - INFO - [Progress] hyperparameter_search:  16.80% (42/250) | Hyperparameter search progress (42/250 fits)
+2025-12-09 11:55:38,176 - __main__ - INFO - [Progress] hyperparameter_search:  18.00% (45/250) | Hyperparameter search progress (45/250 fits)
+2025-12-09 11:58:57,265 - __main__ - INFO - [Progress] hyperparameter_search:  19.20% (48/250) | Hyperparameter search progress (48/250 fits)
+2025-12-09 11:59:25,461 - __main__ - INFO - [Progress] hyperparameter_search:  20.40% (51/250) | Hyperparameter search progress (51/250 fits)
+2025-12-09 12:02:29,184 - __main__ - INFO - [Progress] hyperparameter_search:  21.60% (54/250) | Hyperparameter search progress (54/250 fits)
+2025-12-09 12:03:14,151 - __main__ - INFO - [Progress] hyperparameter_search:  22.80% (57/250) | Hyperparameter search progress (57/250 fits)
+2025-12-09 12:05:18,442 - __main__ - INFO - [Progress] hyperparameter_search:  24.00% (60/250) | Hyperparameter search progress (60/250 fits)
+2025-12-09 12:08:05,003 - __main__ - INFO - [Progress] hyperparameter_search:  25.20% (63/250) | Hyperparameter search progress (63/250 fits)
+2025-12-09 12:08:50,462 - __main__ - INFO - [Progress] hyperparameter_search:  26.40% (66/250) | Hyperparameter search progress (66/250 fits)
+2025-12-09 12:09:22,081 - __main__ - INFO - [Progress] hyperparameter_search:  27.60% (69/250) | Hyperparameter search progress (69/250 fits)
+2025-12-09 12:13:34,029 - __main__ - INFO - [Progress] hyperparameter_search:  28.80% (72/250) | Hyperparameter search progress (72/250 fits)
+2025-12-09 12:14:19,060 - __main__ - INFO - [Progress] hyperparameter_search:  30.00% (75/250) | Hyperparameter search progress (75/250 fits)
+2025-12-09 12:14:58,945 - __main__ - INFO - [Progress] hyperparameter_search:  31.20% (78/250) | Hyperparameter search progress (78/250 fits)
+2025-12-09 12:17:52,233 - __main__ - INFO - [Progress] hyperparameter_search:  32.40% (81/250) | Hyperparameter search progress (81/250 fits)
+2025-12-09 12:19:13,412 - __main__ - INFO - [Progress] hyperparameter_search:  33.60% (84/250) | Hyperparameter search progress (84/250 fits)
+2025-12-09 12:20:22,211 - __main__ - INFO - [Progress] hyperparameter_search:  34.80% (87/250) | Hyperparameter search progress (87/250 fits)
+2025-12-09 12:21:24,867 - __main__ - INFO - [Progress] hyperparameter_search:  36.00% (90/250) | Hyperparameter search progress (90/250 fits)
+2025-12-09 12:23:56,543 - __main__ - INFO - [Progress] hyperparameter_search:  37.20% (93/250) | Hyperparameter search progress (93/250 fits)
+2025-12-09 12:24:24,639 - __main__ - INFO - [Progress] hyperparameter_search:  38.40% (96/250) | Hyperparameter search progress (96/250 fits)
+2025-12-09 12:27:06,708 - __main__ - INFO - [Progress] hyperparameter_search:  39.60% (99/250) | Hyperparameter search progress (99/250 fits)
+2025-12-09 12:30:26,467 - __main__ - INFO - [Progress] hyperparameter_search:  40.80% (102/250) | Hyperparameter search progress (102/250 fits)
+2025-12-09 12:30:53,584 - __main__ - INFO - [Progress] hyperparameter_search:  42.00% (105/250) | Hyperparameter search progress (105/250 fits)
+2025-12-09 12:31:24,257 - __main__ - INFO - [Progress] hyperparameter_search:  43.20% (108/250) | Hyperparameter search progress (108/250 fits)
+2025-12-09 12:34:24,054 - __main__ - INFO - [Progress] hyperparameter_search:  44.40% (111/250) | Hyperparameter search progress (111/250 fits)
+2025-12-09 12:36:24,156 - __main__ - INFO - [Progress] hyperparameter_search:  45.60% (114/250) | Hyperparameter search progress (114/250 fits)
+2025-12-09 12:36:43,727 - __main__ - INFO - [Progress] hyperparameter_search:  46.80% (117/250) | Hyperparameter search progress (117/250 fits)
+2025-12-09 12:37:47,403 - __main__ - INFO - [Progress] hyperparameter_search:  48.00% (120/250) | Hyperparameter search progress (120/250 fits)
+2025-12-09 12:42:37,741 - __main__ - INFO - [Progress] hyperparameter_search:  49.20% (123/250) | Hyperparameter search progress (123/250 fits)
+2025-12-09 12:43:04,646 - __main__ - INFO - [Progress] hyperparameter_search:  50.40% (126/250) | Hyperparameter search progress (126/250 fits)
+2025-12-09 12:45:09,605 - __main__ - INFO - [Progress] hyperparameter_search:  51.60% (129/250) | Hyperparameter search progress (129/250 fits)
+2025-12-09 12:45:46,881 - __main__ - INFO - [Progress] hyperparameter_search:  52.80% (132/250) | Hyperparameter search progress (132/250 fits)
+2025-12-09 12:48:44,912 - __main__ - INFO - [Progress] hyperparameter_search:  54.00% (135/250) | Hyperparameter search progress (135/250 fits)
+2025-12-09 12:51:28,720 - __main__ - INFO - [Progress] hyperparameter_search:  55.20% (138/250) | Hyperparameter search progress (138/250 fits)
+2025-12-09 12:52:07,615 - __main__ - INFO - [Progress] hyperparameter_search:  56.40% (141/250) | Hyperparameter search progress (141/250 fits)
+2025-12-09 12:53:27,259 - __main__ - INFO - [Progress] hyperparameter_search:  57.60% (144/250) | Hyperparameter search progress (144/250 fits)
+2025-12-09 12:56:55,616 - __main__ - INFO - [Progress] hyperparameter_search:  58.80% (147/250) | Hyperparameter search progress (147/250 fits)
+2025-12-09 12:58:26,388 - __main__ - INFO - [Progress] hyperparameter_search:  60.00% (150/250) | Hyperparameter search progress (150/250 fits)
+2025-12-09 12:58:56,856 - __main__ - INFO - [Progress] hyperparameter_search:  61.20% (153/250) | Hyperparameter search progress (153/250 fits)
+2025-12-09 13:01:10,009 - __main__ - INFO - [Progress] hyperparameter_search:  62.40% (156/250) | Hyperparameter search progress (156/250 fits)
+2025-12-09 13:02:04,186 - __main__ - INFO - [Progress] hyperparameter_search:  63.60% (159/250) | Hyperparameter search progress (159/250 fits)
+2025-12-09 13:03:23,296 - __main__ - INFO - [Progress] hyperparameter_search:  64.80% (162/250) | Hyperparameter search progress (162/250 fits)
+2025-12-09 13:05:23,574 - __main__ - INFO - [Progress] hyperparameter_search:  66.00% (165/250) | Hyperparameter search progress (165/250 fits)
+2025-12-09 13:07:32,380 - __main__ - INFO - [Progress] hyperparameter_search:  67.20% (168/250) | Hyperparameter search progress (168/250 fits)
+2025-12-09 13:09:09,138 - __main__ - INFO - [Progress] hyperparameter_search:  68.40% (171/250) | Hyperparameter search progress (171/250 fits)
+2025-12-09 13:09:58,263 - __main__ - INFO - [Progress] hyperparameter_search:  69.60% (174/250) | Hyperparameter search progress (174/250 fits)
+2025-12-09 13:12:32,609 - __main__ - INFO - [Progress] hyperparameter_search:  70.80% (177/250) | Hyperparameter search progress (177/250 fits)
+2025-12-09 13:12:51,724 - __main__ - INFO - [Progress] hyperparameter_search:  72.00% (180/250) | Hyperparameter search progress (180/250 fits)
+2025-12-09 13:13:12,157 - __main__ - INFO - [Progress] hyperparameter_search:  73.20% (183/250) | Hyperparameter search progress (183/250 fits)
+2025-12-09 13:17:49,644 - __main__ - INFO - [Progress] hyperparameter_search:  74.40% (186/250) | Hyperparameter search progress (186/250 fits)
+2025-12-09 13:17:59,114 - __main__ - INFO - [Progress] hyperparameter_search:  75.60% (189/250) | Hyperparameter search progress (189/250 fits)
+2025-12-09 13:19:10,237 - __main__ - INFO - [Progress] hyperparameter_search:  76.80% (192/250) | Hyperparameter search progress (192/250 fits)
+2025-12-09 13:21:35,551 - __main__ - INFO - [Progress] hyperparameter_search:  78.00% (195/250) | Hyperparameter search progress (195/250 fits)
+2025-12-09 13:22:25,858 - __main__ - INFO - [Progress] hyperparameter_search:  79.20% (198/250) | Hyperparameter search progress (198/250 fits)
+2025-12-09 13:25:12,173 - __main__ - INFO - [Progress] hyperparameter_search:  80.40% (201/250) | Hyperparameter search progress (201/250 fits)
+2025-12-09 13:27:14,874 - __main__ - INFO - [Progress] hyperparameter_search:  81.60% (204/250) | Hyperparameter search progress (204/250 fits)
+2025-12-09 13:27:56,092 - __main__ - INFO - [Progress] hyperparameter_search:  82.80% (207/250) | Hyperparameter search progress (207/250 fits)
+2025-12-09 13:29:03,034 - __main__ - INFO - [Progress] hyperparameter_search:  84.00% (210/250) | Hyperparameter search progress (210/250 fits)
+2025-12-09 13:32:04,025 - __main__ - INFO - [Progress] hyperparameter_search:  85.20% (213/250) | Hyperparameter search progress (213/250 fits)
+2025-12-09 13:32:37,257 - __main__ - INFO - [Progress] hyperparameter_search:  86.40% (216/250) | Hyperparameter search progress (216/250 fits)
+2025-12-09 13:34:14,388 - __main__ - INFO - [Progress] hyperparameter_search:  87.60% (219/250) | Hyperparameter search progress (219/250 fits)
+2025-12-09 13:35:22,501 - __main__ - INFO - [Progress] hyperparameter_search:  88.80% (222/250) | Hyperparameter search progress (222/250 fits)
+2025-12-09 13:37:09,478 - __main__ - INFO - [Progress] hyperparameter_search:  90.00% (225/250) | Hyperparameter search progress (225/250 fits)
+2025-12-09 13:40:44,244 - __main__ - INFO - [Progress] hyperparameter_search:  91.20% (228/250) | Hyperparameter search progress (228/250 fits)
+2025-12-09 13:41:48,641 - __main__ - INFO - [Progress] hyperparameter_search:  92.40% (231/250) | Hyperparameter search progress (231/250 fits)
+2025-12-09 13:45:18,345 - __main__ - INFO - [Progress] hyperparameter_search:  93.60% (234/250) | Hyperparameter search progress (234/250 fits)
+2025-12-09 13:46:18,307 - __main__ - INFO - [Progress] hyperparameter_search:  94.80% (237/250) | Hyperparameter search progress (237/250 fits)
+2025-12-09 13:49:19,912 - __main__ - INFO - [Progress] hyperparameter_search:  96.00% (240/250) | Hyperparameter search progress (240/250 fits)
+2025-12-09 13:49:35,299 - __main__ - INFO - [Progress] hyperparameter_search:  97.20% (243/250) | Hyperparameter search progress (243/250 fits)
+2025-12-09 13:50:37,460 - __main__ - INFO - [Progress] hyperparameter_search:  98.40% (246/250) | Hyperparameter search progress (246/250 fits)
+2025-12-09 17:37:09,217 - __main__ - INFO - [Progress] hyperparameter_search:  99.60% (249/250) | Hyperparameter search progress (249/250 fits)
+2025-12-09 17:47:40,052 - __main__ - INFO - [Progress] hyperparameter_search: 100.00% (250/250) | Hyperparameter search progress (250/250 fits)
+2025-12-09 17:49:19,630 - __main__ - INFO - [Progress] hyperparameter_search: 100.00% (100/100) | Hyperparameter search completed
+2025-12-09 17:49:19,630 - classical_methods - INFO - Best parameters: {'kernel': 'rbf', 'gamma': 'scale', 'degree': 2, 'class_weight': 'balanced', 'C': 10}
+2025-12-09 17:49:19,630 - classical_methods - INFO - Best cross-validation score: 0.6191
+2025-12-09 17:49:19,630 - classical_methods - INFO - Training ensemble classifiers (this may take a long time)...
+2025-12-09 19:10:04,083 - __main__ - INFO - [Progress] ensemble_training: 100.00% (100/100) | Ensemble training completed
+2025-12-09 19:10:04,083 - __main__ - INFO - [Progress] fit_pipeline: 100.00% (7/7) | Classifier training completed
+2025-12-09 19:10:04,083 - classical_methods - INFO - Ultra model training completed!
+2025-12-09 19:10:05,098 - __main__ - INFO - System Resources - CPU: 100.0%, Memory: 35.4% (11.3GB/31.9GB)
+2025-12-09 19:10:05,098 - __main__ - INFO - Progress saved: training_completed
+2025-12-09 19:10:05,098 - __main__ - INFO - [Progress] stage::ultra_training:  60.00% (3/5) | Ultra training phase completed
+2025-12-09 19:10:05,098 - __main__ - INFO - STAGE 4: Evaluating ultra model...
+2025-12-09 19:10:05,098 - __main__ - INFO - [Progress] stage::evaluation:  60.00% (3/5) | Evaluation started
+2025-12-09 19:10:05,098 - __main__ - INFO - Evaluating on development set...
+2025-12-09 19:10:05,099 - __main__ - INFO - [Progress] evaluation_dev:   0.00% (0/100) | Starting evaluation
+2025-12-09 19:10:05,099 - __main__ - INFO - [Progress] evaluation_dev_progress:   0.00% (0/5) | Starting batched prediction
+2025-12-09 19:10:05,099 - classical_methods - INFO - Extracting ultra enhanced text features...
+2025-12-09 19:10:12,946 - __main__ - INFO - [Progress] evaluation_dev_progress:  20.00% (1/5) | Batched prediction 1/5
+2025-12-09 19:10:12,946 - classical_methods - INFO - Extracting ultra enhanced text features...
+2025-12-09 19:10:20,827 - __main__ - INFO - [Progress] evaluation_dev_progress:  40.00% (2/5) | Batched prediction 2/5
+2025-12-09 19:10:20,832 - classical_methods - INFO - Extracting ultra enhanced text features...
+2025-12-09 19:10:28,045 - __main__ - INFO - [Progress] evaluation_dev_progress:  60.00% (3/5) | Batched prediction 3/5
+2025-12-09 19:10:28,045 - classical_methods - INFO - Extracting ultra enhanced text features...
+2025-12-09 19:10:35,364 - __main__ - INFO - [Progress] evaluation_dev_progress:  80.00% (4/5) | Batched prediction 4/5
+2025-12-09 19:10:35,364 - classical_methods - INFO - Extracting ultra enhanced text features...
+2025-12-09 19:10:39,988 - __main__ - INFO - [Progress] evaluation_dev_progress: 100.00% (5/5) | Batched prediction 5/5
+2025-12-09 19:10:39,997 - __main__ - INFO - [Progress] evaluation_dev: 100.00% (100/100) | Evaluation completed
+2025-12-09 19:10:39,997 - __main__ - INFO - Evaluating on test set...
+2025-12-09 19:10:39,997 - __main__ - INFO - [Progress] evaluation_test:   0.00% (0/100) | Starting evaluation
+2025-12-09 19:10:39,998 - __main__ - INFO - [Progress] evaluation_test_progress:   0.00% (0/5) | Starting batched prediction
+2025-12-09 19:10:39,998 - classical_methods - INFO - Extracting ultra enhanced text features...
+2025-12-09 19:10:48,372 - __main__ - INFO - [Progress] evaluation_test_progress:  20.00% (1/5) | Batched prediction 1/5
+2025-12-09 19:10:48,372 - classical_methods - INFO - Extracting ultra enhanced text features...
+2025-12-09 19:10:56,702 - __main__ - INFO - [Progress] evaluation_test_progress:  40.00% (2/5) | Batched prediction 2/5
+2025-12-09 19:10:56,702 - classical_methods - INFO - Extracting ultra enhanced text features...
+2025-12-09 19:11:05,068 - __main__ - INFO - [Progress] evaluation_test_progress:  60.00% (3/5) | Batched prediction 3/5
+2025-12-09 19:11:05,071 - classical_methods - INFO - Extracting ultra enhanced text features...
+2025-12-09 19:11:12,829 - __main__ - INFO - [Progress] evaluation_test_progress:  80.00% (4/5) | Batched prediction 4/5
+2025-12-09 19:11:12,829 - classical_methods - INFO - Extracting ultra enhanced text features...
+2025-12-09 19:11:15,314 - __main__ - INFO - [Progress] evaluation_test_progress: 100.00% (5/5) | Batched prediction 5/5
+2025-12-09 19:11:15,336 - __main__ - INFO - [Progress] evaluation_test: 100.00% (100/100) | Evaluation completed
+2025-12-09 19:11:15,336 - __main__ - INFO - [Progress] stage::evaluation:  80.00% (4/5) | Evaluation completed
+2025-12-09 19:11:15,337 - __main__ - INFO - STAGE 5: Saving ultra model...
+2025-12-09 19:11:15,337 - __main__ - INFO - [Progress] stage::model_saving:  80.00% (4/5) | Saving model artifacts
+2025-12-09 19:11:16,479 - classical_methods - INFO - Ultra model saved to ./output/tfidf_svm_ultra_optimized_20251209_111442/ultra_tfidf_svm_model.pkl
+2025-12-09 19:11:16,479 - __main__ - INFO - [Progress] stage::model_saving: 100.00% (5/5) | Model saving completed
+2025-12-09 19:11:17,479 - __main__ - INFO - System Resources - CPU: 100.0%, Memory: 35.6% (11.3GB/31.9GB)
+2025-12-09 19:11:17,480 - __main__ - INFO - Comprehensive results saved to ./output/tfidf_svm_ultra_optimized_20251209_111442
+
+================================================================================
+ULTRA TF-IDF + SVM EXPERIMENT COMPLETED
+================================================================================
+Method: Ultra Enhanced TF-IDF + SVM Ensemble
+Total Training Time: 28594.59 seconds (7.94 hours / 0.33 days)
+
+ACCURACY RESULTS:
+  Development Set: 0.6275 (62.75%)
+  Test Set:        0.6413 (64.13%)
+
+📊 Results: 64.13% best accuracy (target: 80%)
+
+TRAINING STAGES:
+  1. data_loading: 0.01s
+  2. model_initialization: 0.00s
+  3. ultra_training: 28518.09s
+  4. evaluation: 70.24s
+  5. model_saving: 1.14s
+
+DETAILED REPORTS:
+
+Development Set Report:
+              precision    recall  f1-score   support
+
+           0       0.44      0.08      0.14       149
+           1       0.65      0.86      0.74       670
+           2       0.55      0.38      0.45       303
+
+    accuracy                           0.63      1122
+   macro avg       0.55      0.44      0.44      1122
+weighted avg       0.60      0.63      0.58      1122
+
+
+Test Set Report:
+              precision    recall  f1-score   support
+
+           0       0.36      0.08      0.13       113
+           1       0.65      0.86      0.74       607
+           2       0.63      0.42      0.50       317
+
+    accuracy                           0.64      1037
+   macro avg       0.55      0.45      0.46      1037
+weighted avg       0.61      0.64      0.60      1037
+
+================================================================================
+✅ Comprehensive results saved to: ./output/tfidf_svm_ultra_optimized_20251209_111442
+================================================================================
+
+🎉 Ultra experiment completed successfully!
+Best accuracy achieved: 64.13%

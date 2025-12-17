@@ -1,0 +1,14 @@
+{
+    "timestamp": "2025-12-09T11:14:43.998548",
+    "stage": "data_loading",
+    "results": {
+        "stage": "data_loading",
+        "duration": 0.013335466384887695
+    },
+    "system_resources": {
+        "cpu_percent": 100.0,
+        "memory_percent": 32.5,
+        "memory_used_gb": 10.366191864013672,
+        "memory_total_gb": 31.872039794921875
+    }
+}

@@ -1,0 +1,63 @@
+{
+    "method": "Ultra Enhanced TF-IDF + SVM Ensemble",
+    "status": "completed",
+    "total_training_time": 28594.592653989792,
+    "dev_accuracy": 0.6274509803921569,
+    "test_accuracy": 0.6412729026036644,
+    "training_stages": [
+        {
+            "stage": "data_loading",
+            "duration": 0.013335466384887695,
+            "timestamp": "2025-12-09T11:14:43.998443"
+        },
+        {
+            "stage": "model_initialization",
+            "duration": 0.0012733936309814453,
+            "timestamp": "2025-12-09T11:14:45.001859"
+        },
+        {
+            "stage": "ultra_training",
+            "duration": 28518.092350959778,
+            "training_time": 28518.08784675598,
+            "timestamp": "2025-12-09T19:10:04.097823"
+        },
+        {
+            "stage": "evaluation",
+            "duration": 70.23805856704712,
+            "dev_accuracy": 0.6274509803921569,
+            "test_accuracy": 0.6412729026036644,
+            "timestamp": "2025-12-09T19:11:15.336751"
+        },
+        {
+            "stage": "model_saving",
+            "duration": 1.1422710418701172,
+            "timestamp": "2025-12-09T19:11:16.479392"
+        }
+    ],
+    "system_info": {
+        "initial_resources": {
+            "cpu_percent": 100.0,
+            "memory_percent": 32.5,
+            "memory_used_gb": 10.355384826660156,
+            "memory_total_gb": 31.872039794921875
+        },
+        "final_resources": {
+            "cpu_percent": 100.0,
+            "memory_percent": 35.6,
+            "memory_used_gb": 11.346912384033203,
+            "memory_total_gb": 31.872039794921875
+        },
+        "total_duration_hours": 7.942942403886053,
+        "total_duration_days": 0.3309559334952522
+    },
+    "hyperparameters": {
+        "max_features": 200000,
+        "ngram_range": "(1, 4)",
+        "use_extensive_search": true,
+        "use_ensemble": true,
+        "use_images": false,
+        "use_pca": true,
+        "use_feature_selection": true
+    },
+    "timestamp": "2025-12-09T19:11:17.480141"
+}
