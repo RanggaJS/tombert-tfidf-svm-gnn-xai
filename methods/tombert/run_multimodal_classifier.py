@@ -851,7 +851,7 @@ def main():
         # Initialize ResNet-152 encoder (default)
         resnet_weights_path = os.path.join(args.resnet_root, 'resnet152.pth')
         if os.path.isfile(resnet_weights_path):
-    net = getattr(resnet, 'resnet152')()
+            net = getattr(resnet, 'resnet152')()
             net.load_state_dict(torch.load(resnet_weights_path, weights_only=False))
             logger.info(f"Loaded ResNet-152 weights from {resnet_weights_path}")
         else:
@@ -861,7 +861,7 @@ def main():
             else:
                 # Older torchvision API
                 net = tv_resnet152(pretrained=True)
-    encoder = myResnet(net, args.fine_tune_cnn, device)
+        encoder = myResnet(net, args.fine_tune_cnn, device)
     
     # Mixed precision: only enable half() if Apex is available; otherwise keep float32
     apex_installed = False
@@ -968,10 +968,10 @@ def main():
                               bias_correction=False,
                 max_grad_norm=1.0
             )
-        if args.loss_scale == 0:
-            optimizer = FP16_Optimizer(optimizer, dynamic_loss_scale=True)
-        else:
-            optimizer = FP16_Optimizer(optimizer, static_loss_scale=args.loss_scale)
+            if args.loss_scale == 0:
+                optimizer = FP16_Optimizer(optimizer, dynamic_loss_scale=True)
+            else:
+                optimizer = FP16_Optimizer(optimizer, static_loss_scale=args.loss_scale)
             logger.info("Using Apex FP16 optimizer (FusedAdam).")
         except ImportError:
             logger.warning("Apex is not installed. Disabling fp16 and continuing with standard optimizer.")

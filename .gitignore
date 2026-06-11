@@ -50,6 +50,8 @@ results/
 *.tmp
 *.temp
 *.bak
+*.zip
+*.tar.gz
 
 # Password files
 *.key

@@ -30,7 +30,7 @@ def _resolve_clip_module() -> Optional[object]:
             if module_name != "clip":
                 logger.debug(f"Falling back to vendored module '{module_name}'.")
             return module
-except ImportError:
+        except ImportError:
             continue
     return None
 

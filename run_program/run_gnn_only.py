@@ -43,7 +43,7 @@ class OptimizedGNNConfig:
         if dataset == 'twitter2015_rumor':
             self.data_dir = './output/rumor_labeled'
         else:
-        self.data_dir = f'./absa_data/{dataset}'
+            self.data_dir = f'./absa_data/{dataset}'
         self.output_dir = f'./output/gnn_optimized_{dataset}'
         
         # Model architecture (OPTIMIZED for extreme imbalance)

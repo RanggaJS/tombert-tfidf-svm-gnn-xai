@@ -1,0 +1,15 @@
+{
+    "best_dev_accuracy": 0.0,
+    "best_dev_f1": 0.0,
+    "best_dev_precision": 0.0,
+    "best_dev_recall": 0.0,
+    "final_test_accuracy": 0.0,
+    "final_test_f1": 0.0,
+    "final_test_precision": 0.0,
+    "final_test_recall": 0.0,
+    "epochs_completed": 0,
+    "training_time_hours": 9.50636076874203,
+    "training_time_days": 0.3960983653642513,
+    "target_achieved": false,
+    "target_accuracy": 0.95
+}

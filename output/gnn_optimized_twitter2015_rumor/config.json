@@ -3,7 +3,7 @@
     "data_dir": "./output/rumor_labeled",
     "output_dir": "./output/gnn_optimized_twitter2015_rumor",
     "embedding_dim": 300,
-    "hidden_dim": 512,
+    "hidden_dim": 256,
     "num_heads": 8,
     "dropout": 0.2,
     "alpha": 0.15,
@@ -23,7 +23,7 @@
         5
     ],
     "batch_size": 64,
-    "epochs": 50,
+    "epochs": 30,
     "learning_rate": 0.0015,
     "weight_decay": 1e-05,
     "label_smoothing": 0.05,

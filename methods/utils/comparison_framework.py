@@ -554,11 +554,3 @@ def main():
 
 if __name__ == "__main__":
     comparison = main()
-    logger.info(f"Report saved to: {report_path}")
-    
-    return comparison
-
-
-if __name__ == "__main__":
-    comparison = main()
-

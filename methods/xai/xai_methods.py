@@ -148,7 +148,7 @@ class OptimizedXAIAnalyzer:
         if device == 'auto':
             self.device = 'cuda' if self.config.enable_gpu else 'cpu'
         else:
-        self.device = device
+            self.device = device
         
         # Create directories
         self.output_dir.mkdir(parents=True, exist_ok=True)
@@ -198,14 +198,14 @@ class OptimizedXAIAnalyzer:
             with torch.no_grad():
                 if len(layer_attention.shape) == 4:
                     batch_attention = layer_attention[0]
-            else:
+                else:
                     batch_attention = layer_attention
                 
                 # Use head or average
                 if head_idx is not None and head_idx < batch_attention.shape[0]:
                     attention_matrix = batch_attention[head_idx].cpu().numpy()
                     analysis_type = f"Layer {layer_idx}, Head {head_idx}"
-        else:
+                else:
                     attention_matrix = batch_attention.mean(dim=0).cpu().numpy()
                     analysis_type = f"Layer {layer_idx}, Average"
             
@@ -293,7 +293,7 @@ class OptimizedXAIAnalyzer:
             ax.set_xlabel('Key Tokens', fontsize=10)
             ax.set_ylabel('Query Tokens', fontsize=10)
             
-        plt.tight_layout()
+            plt.tight_layout()
             
             # Save with optimized settings
             filename = self.output_dir / 'visualizations' / f'attention_heatmap_{title.replace(" ", "_").replace(",", "")}.png'
@@ -544,11 +544,11 @@ class OptimizedXAIAnalyzer:
             fig, ax = plt.subplots(figsize=(8, 6))
             
             # Use optimized heatmap
-        sns.heatmap(
-            cm, 
-            annot=True, 
-            fmt='d', 
-            cmap='Blues',
+            sns.heatmap(
+                cm,
+                annot=True,
+                fmt='d',
+                cmap='Blues',
                 xticklabels=class_names or range(cm.shape[1]),
                 yticklabels=class_names or range(cm.shape[0]),
                 ax=ax,
@@ -559,7 +559,7 @@ class OptimizedXAIAnalyzer:
             ax.set_xlabel('Predicted Label', fontsize=10)
             ax.set_ylabel('True Label', fontsize=10)
             
-        plt.tight_layout()
+            plt.tight_layout()
             
             filename = self.output_dir / 'visualizations' / 'confusion_matrix.png'
             plt.savefig(filename, dpi=self.config.plot_dpi, bbox_inches='tight')
@@ -598,8 +598,8 @@ class OptimizedXAIAnalyzer:
             ax.legend()
             ax.grid(True, alpha=0.3)
             
-        plt.xticks(rotation=45)
-        plt.tight_layout()
+            plt.xticks(rotation=45)
+            plt.tight_layout()
             
             filename = self.output_dir / 'visualizations' / 'classification_report.png'
             plt.savefig(filename, dpi=self.config.plot_dpi, bbox_inches='tight')
@@ -628,7 +628,7 @@ class OptimizedXAIAnalyzer:
             ax.legend(fontsize=8)
             ax.grid(True, alpha=0.3)
             
-        plt.tight_layout()
+            plt.tight_layout()
             
             filename = self.output_dir / 'visualizations' / 'roc_curves.png'
             plt.savefig(filename, dpi=self.config.plot_dpi, bbox_inches='tight')

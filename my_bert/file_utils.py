@@ -17,8 +17,13 @@ from functools import wraps
 
 from tqdm import tqdm
 
-import boto3
-from botocore.exceptions import ClientError
+try:
+    import boto3
+    from botocore.exceptions import ClientError
+    BOTO3_AVAILABLE = True
+except ImportError:
+    BOTO3_AVAILABLE = False
+    ClientError = Exception  # fallback so @s3_request decorator doesn't break
 import requests
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name

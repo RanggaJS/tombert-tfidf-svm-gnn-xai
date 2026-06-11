@@ -181,36 +181,36 @@ class UltraImageFeatureExtractor:
     def extract_features(self, img_path):
         """Extract ultra comprehensive image features"""
         try:
-                img = cv2.imread(img_path)
-                if img is None:
+            img = cv2.imread(img_path)
+            if img is None:
                 return np.zeros(500)  # Increased feature size
-                
+
             img = cv2.resize(img, self.target_size)
-                
+
             # Multiple feature types
             color_features = self._extract_ultra_color_features(img)
             texture_features = self._extract_ultra_texture_features(img)
             edge_features = self._extract_ultra_edge_features(img)
             statistical_features = self._extract_ultra_statistical_features(img)
             shape_features = self._extract_shape_features(img)
-            
+
             # Combine all features
             all_features = np.concatenate([
-                    color_features,
-                    texture_features, 
+                color_features,
+                texture_features,
                 edge_features,
                 statistical_features,
                 shape_features
             ])
-            
+
             # Ensure fixed size
             if len(all_features) < 500:
                 all_features = np.pad(all_features, (0, 500 - len(all_features)), 'constant')
             else:
                 all_features = all_features[:500]
-            
+
             return all_features
-            except Exception as e:
+        except Exception as e:
             logger.warning(f"Error extracting features from {img_path}: {e}")
             return np.zeros(500)
     
@@ -261,7 +261,7 @@ class UltraImageFeatureExtractor:
         for radius in [1, 2, 3]:
             lbp = self._compute_lbp_radius(gray, radius)
             hist_lbp, _ = np.histogram(lbp.ravel(), bins=32, range=(0, 256))
-        hist_lbp = hist_lbp / (hist_lbp.sum() + 1e-7)
+            hist_lbp = hist_lbp / (hist_lbp.sum() + 1e-7)
             features.extend(hist_lbp)
         
         # Gabor filters with multiple orientations and frequencies
@@ -302,7 +302,7 @@ class UltraImageFeatureExtractor:
         # Canny with different thresholds
         for low, high in [(50, 150), (100, 200), (30, 100)]:
             edges = cv2.Canny(gray, low, high)
-        edge_density = np.sum(edges > 0) / edges.size
+            edge_density = np.sum(edges > 0) / edges.size
             features.append(edge_density)
         
         # Sobel in different directions
@@ -529,9 +529,9 @@ class UltraTFIDFSVMClassifier:
         # Multiple TF-IDF features
         tfidf_features_list = []
         for i, vectorizer in enumerate(self.tfidf_vectorizers):
-        if fit:
+            if fit:
                 features = vectorizer.fit_transform(processed_texts)
-        else:
+            else:
                 features = vectorizer.transform(processed_texts)
             tfidf_features_list.append(features)
         
@@ -738,7 +738,7 @@ class UltraTFIDFSVMClassifier:
                 image_scaled * 1.5       # Increased image weight
             ])
         else:
-        combined_features = np.hstack([
+            combined_features = np.hstack([
                 text_scaled * 3.0,
                 sentiment_scaled * 2.0
             ])
@@ -767,8 +767,8 @@ class UltraTFIDFSVMClassifier:
         else:
             if self.use_extensive_search:
                 self.svm_classifier = self._perform_extensive_search(combined_features, labels)
-        else:
-        self.svm_classifier.fit(combined_features, labels)
+            else:
+                self.svm_classifier.fit(combined_features, labels)
         step += 1
         self._update_progress("fit_pipeline", step, pipeline_steps, "Classifier training completed")
         
@@ -799,11 +799,11 @@ class UltraTFIDFSVMClassifier:
             # Extract features for batch
             tfidf_features, sentiment_features = self.extract_text_features(texts_batch, fit=False)
             image_features = self.extract_image_features(images_batch, phase=f"{phase}_image_extraction")
-        
-        # Convert and transform
-        tfidf_dense = tfidf_features.toarray()
-        
-        if self.use_pca:
+
+            # Convert and transform
+            tfidf_dense = tfidf_features.toarray()
+
+            if self.use_pca:
                 tfidf_pca = self.pca_text.transform(tfidf_dense)
                 tfidf_svd = self.svd_text.transform(tfidf_dense)
                 tfidf_reduced = np.hstack([tfidf_pca, tfidf_svd])
@@ -817,8 +817,8 @@ class UltraTFIDFSVMClassifier:
             text_scaled = np.hstack(text_scaled_list)
 
             image_scaled = self.image_scaler.transform(image_features) if self.use_images else image_features
-        sentiment_scaled = self.sentiment_scaler.transform(sentiment_features)
-        
+            sentiment_scaled = self.sentiment_scaler.transform(sentiment_features)
+
             # Combine features with same weights as training
             if self.use_images:
                 combined_features = np.hstack([
@@ -827,7 +827,7 @@ class UltraTFIDFSVMClassifier:
                     image_scaled * 1.5
                 ])
             else:
-        combined_features = np.hstack([
+                combined_features = np.hstack([
                     text_scaled * 3.0,
                     sentiment_scaled * 2.0
                 ])
@@ -835,7 +835,7 @@ class UltraTFIDFSVMClassifier:
             # Apply feature selection
             if self.use_feature_selection and self.feature_selector is not None:
                 combined_features = self.feature_selector.transform(combined_features)
-        
+
             # Predict batch
             if self.use_ensemble:
                 batch_preds = self.classifiers.predict(combined_features)
